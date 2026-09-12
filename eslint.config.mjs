@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Bundle thiết kế: prototype .dc.html + support.js là tham chiếu để dựng lại,
+    // không phải code production. Xem docs/design_handoff/README.md.
+    "docs/**",
+    // Prisma Client sinh tự động.
+    "generated/**",
   ]),
 ]);
 

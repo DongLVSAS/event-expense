@@ -25,20 +25,26 @@ Công thức tính toán **không lặp lại ở đây** — xem mục 5 của 
 ## 2. Sơ đồ điều hướng
 
 ```
-        ┌──────────────────────── / (Home) ────────────────────────┐
-        │  FAB "+ Tạo sự kiện"          tap item        menu "..." │
-        │         │                        │                  │   │
-        ▼         ▼                        ▼                  ▼   │
-     /new ──POST──► /e/{shareId} ◄──────────┘        sửa ─► /e/{id}/edit
-                         │                           xóa khỏi máy ─┘ (ở lại Home)
-                         │  nút "Quyết toán" (fixed đáy màn)        xóa hẳn ────┘
-                         ▼
-              /e/{shareId}/settlement
-                         │  nút "← Quay lại danh sách chi tiêu"
-                         └──────────► /e/{shareId}
+/ (Home)
+  ├── FAB "＋ Tạo sự kiện" ──────► /new ──POST──► /e/{shareId}
+  ├── "Mở sự kiện" ─────────────► /e/{shareId}
+  └── "✕" ──► xóa khỏi máy này (ở lại Home, chỉ đụng localStorage)
 
-  shareId không tồn tại / đã xóa ─────► 404 ─── nút "Về trang chủ" ──► /
+/e/{shareId}          ← màn trung tâm, mở trực tiếp được bằng link chia sẻ
+  ├── "←" ──────────────────────► /
+  ├── "🔗" ──► sao chép link (không điều hướng)
+  ├── "⋯" ──┬── "Sửa sự kiện" ──► /e/{shareId}/edit ──lưu──► /e/{shareId}
+  │         └── "Xóa hẳn" ──► xác nhận ──► / (kèm toast)
+  ├── tap card chi tiêu ──► bottom sheet sửa/xóa (không điều hướng)
+  └── "Quyết toán →" ───────────► /e/{shareId}/settlement
+
+/e/{shareId}/settlement
+  └── "← {tên sự kiện}" ────────► /e/{shareId}
+
+shareId sai / đã xóa ──► 404 ──► "Về trang chủ" ──► /
 ```
+
+Lưu ý: **"Sửa sự kiện" và "Xóa hẳn" chỉ tới được từ màn chi tiết**, không có ở Home — vì người mở qua link chia sẻ không bao giờ đi qua Home.
 
 Mở link `/e/{shareId}` lần đầu trên một máy → **tự động thêm `shareId` vào localStorage** của máy đó (xem `lib/local-events.ts`), để lần sau nó xuất hiện ở Home.
 
@@ -91,7 +97,9 @@ Mở link `/e/{shareId}` lần đầu trên một máy → **tự động thêm 
 - Ghi theo **last-write-wins**, nhưng so `updatedAt` / `dataVersion`: nếu lệch → toast "Dữ liệu vừa được người khác cập nhật" rồi reload.
 - Riêng `PUT /api/events/{shareId}/transfers/{transferKey}` gửi kèm `dataVersion`; server trả **409** khi lệch → client reload, không retry mù.
 
-**[CHỜ QUYẾT ĐỊNH]** Thư viện fetch phía client: SWR **hoặc** TanStack Query — `CLAUDE.md` yêu cầu chọn một và không trộn lẫn, hiện chưa chốt.
+**[ĐÃ CHỐT]** Thư viện fetch phía client là **SWR**. Đã cài (`swr@^2.5.1`). Không dùng lẫn TanStack Query ở bất kỳ đâu.
+
+SWR đáp ứng sẵn hai nhu cầu của mục này: `revalidateOnFocus` (mặc định bật) cho refetch khi tab được focus, và `refreshInterval: 10_000` cho polling. Dừng polling khi tab ẩn là hành vi mặc định của SWR (`refreshWhenHidden: false`).
 
 ### 3.6. Xác nhận trước hành động phá hủy
 
@@ -115,25 +123,29 @@ Dùng cho: đã tạo sự kiện · đã thêm/sửa/xóa khoản chi · đã s
 
 Ngoại lệ nghiệp vụ: toast **xung đột dữ liệu** (*"Dữ liệu vừa được người khác cập nhật"*) không tự tắt cho tới khi reload xong.
 
-### 3.9. `shareId` — **[CẦN XÁC NHẬN]**
+### 3.9. `shareId`
 
-Nghiệp vụ (prompt gốc mục 2) quy định **nanoid 16–21 ký tự** để khó đoán — đây là ranh giới bảo mật duy nhất của app, vì ai có link là có toàn quyền sửa.
+**[ĐÃ CHỐT]** **nanoid 16–21 ký tự**, sinh ở server. Đây là ranh giới bảo mật duy nhất của app — ai có link là có toàn quyền sửa — nên không rút ngắn.
 
-Handoff minh họa toast sao chép link dưới dạng `warikan.app/e/<shareId 10 ký tự>`. Spec này **giữ 16–21** vì độ dài `shareId` là câu hỏi bảo mật, không phải câu hỏi giao diện — 10 ký tự dễ dò hơn đáng kể. Nếu chủ dự án muốn link ngắn thật thì báo lại để cân nhắc đánh đổi.
+Handoff minh họa toast sao chép link dưới dạng `warikan.app/e/<shareId 10 ký tự>`; con số 10 đó chỉ là minh họa trong prototype, **không áp dụng**. Độ dài `shareId` là câu hỏi bảo mật, không phải câu hỏi giao diện.
 
 ---
 
-## 4. Danh sách [CHỜ QUYẾT ĐỊNH]
+## 4. Tình trạng các quyết định
 
-Các mục dưới đây **chưa chốt**, spec màn hình để chỗ trống có chủ đích. Khi code chạm tới phải hỏi trước:
+**Hiện không còn mục nào treo.** Mọi quyết định đã chốt được ghi tại chỗ trong file spec tương ứng kèm nhãn `[ĐÃ CHỐT]`.
 
-| # | Mục | Ảnh hưởng tới màn |
+Các mục từng treo và kết quả:
+
+| Mục | Chốt thành | Ghi ở |
 |---|---|---|
-| 1 | **SWR hay TanStack Query** — chọn một, không trộn lẫn | 01, 03, 04 |
-| 2 | **[CẦN THIẾT KẾ]** Lối vào "Sửa sự kiện" và "Xóa hẳn sự kiện" — handoff không vẽ nút nào dẫn tới | 01, 03 |
-| 3 | Độ dài `shareId`: nghiệp vụ nói nanoid 16–21, toast trong handoff minh họa 10 ký tự (xem §3.9) | 02, 03, 04 |
+| Thư viện fetch phía client | **SWR** | §3.5 |
+| Độ dài `shareId` | **nanoid 16–21**, không rút ngắn | §3.9 |
+| Lối vào "Sửa sự kiện" / "Xóa hẳn sự kiện" | **Header màn chi tiết sự kiện** | [03](03-event-detail.md) §3.1 |
 
-### Đã được `design_handoff` chốt (không còn treo)
+Vẫn còn vài mục `[ĐỀ XUẤT]` nhỏ chưa duyệt (endpoint gộp cho Home, giới hạn 100 ký tự tên sự kiện, endpoint ghi `settledAt` khi không phát sinh giao dịch) — không chặn việc code, nhưng chạm tới thì hỏi.
+
+### Đã được `design_handoff` chốt
 
 | Mục cũ | Chốt thành |
 |---|---|

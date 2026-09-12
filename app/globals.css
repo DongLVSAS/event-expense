@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Design token — nguồn duy nhất: docs/design_handoff/README.md mục "Design Tokens".
+ * Sửa ở đây khi handoff đổi, KHÔNG rải giá trị hex trực tiếp trong component.
+ *
+ * App cố ý chỉ có một chế độ sáng (handoff không thiết kế dark mode),
+ * nên không có khối prefers-color-scheme.
+ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* --- Chữ --- */
+  --color-ink: #2e2a3b; /* text chính */
+  --color-muted: #7a7288; /* text phụ */
+  --color-faint: #9a93a8; /* meta */
+  --color-fainter: #b0a8bc; /* eyebrow, số thứ tự */
+  --color-faintest: #c9c1d4;
+  --color-on-cream: #bca898;
+  --color-on-cream-deep: #a8917f;
+
+  /* --- Primary (coral) --- */
+  --color-primary: #ff6b4a;
+  --color-primary-hover: #f3552f;
+  --color-primary-text: #e0512f; /* coral trên nền sáng, đủ tương phản để đọc */
+  --color-primary-deep: #d94f2b;
+  --color-primary-soft: #fff1ec;
+  --color-primary-border: #ffd9ce;
+  --color-primary-badge: #ffe0d3;
+
+  /* --- Success (teal) --- */
+  --color-success: #2fbf9b;
+  --color-success-hover: #26a686;
+  --color-success-text: #17a673;
+  --color-success-soft: #f1fbf7;
+  --color-success-border: #c7e8dc;
+  --color-success-badge: #dff6ec;
+
+  /* --- Danger --- */
+  --color-danger: #e84855;
+  --color-danger-strong: #d6384c;
+  --color-danger-text: #c2374b;
+  --color-danger-soft: #ffecee;
+  --color-danger-softer: #fff4f5;
+  --color-danger-border: #f8c9cc;
+
+  /* --- Khác --- */
+  --color-warning: #ffd166; /* số tiền trên nền tối */
+  --color-surface: #ffffff;
+  --color-cream: #fffbf5; /* thân app */
+  --color-cream-deep: #fff3e7; /* vùng nhóm */
+  --color-border-card: #f1e7dd;
+  --color-border-input: #f0e6dc;
+  --color-hairline: #f7f0e9;
+  --color-shadow-flat: #f2e9e0; /* shadow "2px offset", không blur */
+  --color-dark: #2e2a3b;
+  --color-dark-hover: #453e58;
+  --color-disabled: #cfc8d6;
+
+  /* Giữ lại cho trang mặc định của create-next-app, sẽ bỏ khi dựng màn Home. */
+  --color-background: #fffbf5;
+  --color-foreground: #2e2a3b;
+
+  /* --- Font --- */
+  --font-display: var(--font-display), "Baloo 2", system-ui, sans-serif; /* heading + số tiền */
+  --font-body: var(--font-body), Nunito, system-ui, sans-serif; /* UI + body */
+  --font-sans: var(--font-body), Nunito, system-ui, sans-serif;
+
+  /* --- Bo góc --- */
+  --radius-input: 16px;
+  --radius-card: 22px;
+  --radius-sheet: 28px;
+  --radius-pill: 999px;
+
+  /* --- Animation (handoff mục Animation) --- */
+  --animate-wk-pop: wk-pop 0.3s ease both;
+  --animate-wk-rise: wk-rise 0.25s ease both;
+  --animate-wk-bob: wk-bob 2.6s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Vùng chạm tối thiểu 44×44px là bắt buộc — xem docs/screens/00-index.md §3.3. */
+
+@keyframes wk-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wk-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Confetti: 60 hạt, delay ngẫu nhiên 0–1.2s, tổng 4.2s. Không dùng thư viện. */
+@keyframes wk-fall {
+  from {
+    opacity: 1;
+    transform: translateY(-40px) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(760px) rotate(680deg);
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(
+    1200px 600px at 15% 0%,
+    #fff0da 0%,
+    #fdf7f0 45%,
+    #eff8f3 100%
+  );
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* Tôn trọng lựa chọn giảm chuyển động của người dùng (00-index §3.3, 04-settlement §5.2). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
