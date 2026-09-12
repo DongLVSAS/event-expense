@@ -6,7 +6,29 @@ Hướng dẫn làm việc trong repo này. Đọc kỹ trước khi sinh hoặc
 
 Web app (mobile-first) ghi chép chi tiêu cho các buổi đi chơi nhóm và tự động quyết toán ai chuyển tiền cho ai. Mỗi sự kiện có một link chia sẻ, không cần đăng nhập.
 
-Spec đầy đủ: `docs/spec.md`. **Khi có mâu thuẫn giữa file này và spec, hỏi lại tôi, không tự quyết định.**
+## Nguồn sự thật
+
+Thứ tự ưu tiên phụ thuộc **loại câu hỏi**:
+
+| Câu hỏi thuộc loại | Nguồn thắng |
+|---|---|
+| **Giao diện** — màu, font, spacing, radius, shadow, animation, layout, copy hiển thị, cử chỉ tương tác | 1. `docs/design_handoff/README.md` |
+| **Nghiệp vụ** — công thức, validate, quyền, đồng bộ, edge case, trạng thái lỗi | 1. `docs/screens/*.md` |
+
+Đầy đủ bốn tầng, tầng trên đè tầng dưới **trong phạm vi của mình**:
+
+1. **`docs/design_handoff/README.md`** — bản giao thiết kế. Nguồn sự thật về **giao diện**. Token màu/typography/spacing, animation, hành vi tương tác, copy. Prototype ở `design_handoff/prototype/*.dc.html` là **tham chiếu để dựng lại**, không phải code production để copy. Ảnh nhân vật ở `design_handoff/assets/`.
+2. **`docs/screens/*.md`** — spec màn hình. Nguồn sự thật về **nghiệp vụ**: luồng, validate, edge case, đồng bộ nhiều người, mã lỗi. Bảng route ở `00-index.md`.
+3. **`docs/warikan-app-prompt.md`** — prompt mô tả gốc. Chỉ tra khi hai tầng trên không nói tới. **Đây là bản duy nhất**; bản sao cũ trong `design_handoff/spec/` đã bị xóa vì lệch nội dung.
+4. **`CLAUDE.md`** (file này) — quy tắc kỹ thuật: stack, ranh giới server/client, code style, quy trình.
+
+Khi không rõ một câu hỏi là "giao diện" hay "nghiệp vụ" → **hỏi tôi**, đừng tự xếp loại để lấy cớ chọn bên.
+
+Ba tầng này không được mâu thuẫn nhau. **Khi phát hiện mâu thuẫn — giữa hai tầng bất kỳ, hoặc giữa tài liệu và yêu cầu tôi vừa nói — thì dừng lại hỏi tôi, không tự chọn bên nào.**
+
+**Code không đi trước spec.** Nếu khi code thấy cần làm khác spec: dừng → báo tôi → sửa spec → rồi mới code. Không sửa code trước rồi cập nhật spec sau.
+
+Quyết định đã chốt được ghi thẳng vào file spec kèm nhãn `[ĐÃ CHỐT]`. Mục còn treo mang nhãn `[CHỜ QUYẾT ĐỊNH]`, `[ĐỀ XUẤT]` hoặc `[CẦN XÁC NHẬN]` — **chạm tới thì hỏi, không tự chọn.**
 
 ## Stack
 
@@ -34,7 +56,9 @@ npx prisma generate      # sinh lại client sau khi sửa schema
 ```
 app/
   page.tsx                          # Home — danh sách sự kiện (localStorage)
+  new/page.tsx                      # Tạo sự kiện
   e/[shareId]/page.tsx              # Chi tiết sự kiện — danh sách chi tiêu
+  e/[shareId]/edit/page.tsx         # Sửa sự kiện (tên, ngày, người tham gia)
   e/[shareId]/settlement/page.tsx   # Màn quyết toán
   api/                              # Route handlers
 components/
@@ -124,12 +148,35 @@ Trên Vercel mỗi route handler là một serverless function, không có conne
 
 ## Quy trình làm việc
 
+### Bắt buộc trước khi code một màn
+
+1. **Đọc file spec tương ứng** trong `docs/screens/` — tra bảng route ở `00-index.md` để biết màn nào ứng với file nào.
+2. **Tóm tắt 3–5 dòng**: spec yêu cầu gì ở màn này, mục nào đang treo (`[CHỜ QUYẾT ĐỊNH]` / `[ĐỀ XUẤT]` / `[CẦN XÁC NHẬN]`). Đợi tôi xác nhận rồi mới viết.
+3. **Chạm vào mục treo → hỏi trước**, không tự chọn.
+4. Code xong, **đối chiếu lại từng gạch đầu dòng của spec** trước khi báo hoàn thành.
+
+### Trong lúc làm
+
 - Làm từng phần nhỏ, xong một màn hình thì dừng lại cho tôi review, không làm một lèo cả app.
-- Trước khi code một phần mới, tóm tắt lại kế hoạch trong 3–5 dòng và đợi tôi xác nhận.
 - Sau khi sửa code, chạy `npm run build` và `npm run test` để chắc chắn không vỡ.
+- Phát hiện code hiện có lệch spec → báo tôi, đừng lặng lẽ sửa theo hướng nào.
+
+### Hook tự động (`.claude/settings.json`)
+
+Repo có 3 hook trong `.claude/hooks/`, chạy bằng `node`, chỉ để nhắc — không chặn:
+
+| Hook | Khi nào chạy | Làm gì |
+|---|---|---|
+| `session-start.mjs` | Mở phiên | Nạp thứ tự ưu tiên tài liệu + liệt kê spec đang có |
+| `spec-reminder.mjs` | Trước mỗi Edit/Write vào `app/`, `components/`, `lib/` | Chỉ ra file spec tương ứng với file đang sửa |
+| `stop-reminder.mjs` | Kết thúc lượt | Nhắc chạy build + test, chỉ khi còn thay đổi chưa commit |
+
+Sửa ánh xạ file → spec ở bảng `RULES` trong `spec-reminder.mjs` khi thêm màn mới. Muốn chuyển từ nhắc sang chặn: xem ghi chú cuối file đó.
 
 ## Chưa quyết định (hỏi tôi khi chạm tới)
 
-- Danh sách nhân vật: số lượng, tên file, tỉ lệ ảnh (full-body hay avatar tròn) — TODO
-- Design system: màu chủ đạo, font, phong cách — TODO
-- Thư viện hiệu ứng pháo hoa — TODO
+- **SWR hay TanStack Query** — chọn một, không trộn lẫn. TODO
+- **Lối vào "Sửa sự kiện" và "Xóa hẳn sự kiện"** — handoff không vẽ nút nào dẫn tới hai màn/hành động này, nhưng chúng là yêu cầu nghiệp vụ. Xem `docs/screens/01-home.md` §4.1. TODO
+- **Độ dài `shareId`** — nghiệp vụ chốt nanoid 16–21; handoff minh họa 10 ký tự. Spec đang giữ 16–21 vì đây là câu hỏi bảo mật. Xem `docs/screens/00-index.md` §3.9. TODO
+
+Đã được `docs/design_handoff/` chốt, **không còn treo**: danh sách nhân vật (10 con, ảnh ở `design_handoff/assets/`, trần 10 người/sự kiện) · design system (token đầy đủ trong README của handoff) · hiệu ứng pháo hoa (**không dùng thư viện** — CSS `@keyframes wk-fall`, 60 hạt).

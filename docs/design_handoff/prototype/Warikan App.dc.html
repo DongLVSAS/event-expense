@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:radial-gradient(1200px 600px at 15% 0%,#FFF0DA 0%,#FDF7F0 45%,#EFF8F3 100%);font-family:Nunito,system-ui,sans-serif;color:#2E2A3B}
+a{color:#FF6B4A}a:hover{color:#E0512F}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:0;height:0}
+@keyframes wk-pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes wk-rise{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes wk-fall{0%{transform:translateY(-40px) rotate(0);opacity:1}100%{transform:translateY(760px) rotate(680deg);opacity:0}}
+@keyframes wk-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;padding:40px 36px 64px;justify-content:center">
+
+<div style="flex:1 1 300px;max-width:360px;min-width:260px">
+<div style="display:inline-block;padding:5px 12px;border-radius:999px;background:#FFE0D3;color:#D94F2B;font:800 11px/1 Nunito,sans-serif;letter-spacing:.08em;text-transform:uppercase">Prototype · mobile-first</div>
+<h1 style="margin:14px 0 8px;font:800 38px/1.05 'Baloo 2',sans-serif;color:#2E2A3B;text-wrap:pretty">Warikan<br><span style="color:#FF6B4A">chia tiền vui vẻ</span></h1>
+<p style="margin:0 0 22px;font:400 14px/1.6 Nunito,sans-serif;color:#6B6479">Ghi chép & quyết toán chi phí cho buổi đi chơi. Không cần đăng nhập — mỗi sự kiện một link chia sẻ, ai có link cũng nhập và xem được.</p>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="background:#fff;border:1px solid #F0E6DC;border-radius:18px;padding:14px 16px;box-shadow:0 2px 0 #F3EAE1">
+<div style="font:700 12px/1 Nunito,sans-serif;color:#FF6B4A;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Giả định của tôi</div>
+<ul style="margin:0;padding-left:16px;font:400 13px/1.7 Nunito,sans-serif;color:#5C5569">
+<li>10 nhân vật của bạn được gán tự động, mỗi người một con — tap để đổi.</li>
+<li>Tiền JPY, số nguyên, hiển thị <b>¥12,000</b>.</li>
+<li>Toàn bộ UI tiếng Việt, vùng chạm ≥ 44px.</li>
+</ul>
+</div>
+<div style="background:#fff;border:1px solid #F0E6DC;border-radius:18px;padding:14px 16px;box-shadow:0 2px 0 #F3EAE1">
+<div style="font:700 12px/1 Nunito,sans-serif;color:#17A673;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Thử ngay trong prototype</div>
+<ul style="margin:0;padding-left:16px;font:400 13px/1.7 Nunito,sans-serif;color:#5C5569">
+<li>Tạo sự kiện → thêm người (tap nhân vật để đổi).</li>
+<li>Thêm/sửa/xóa khoản chi, tổng chi cập nhật ngay.</li>
+<li>Quyết toán → tick Done từng giao dịch → pháo hoa.</li>
+</ul>
+</div>
+<div style="background:linear-gradient(135deg,#FFF3E0,#FFE9F1);border:1px dashed #F3C9B8;border-radius:18px;padding:14px 16px">
+<div style="font:700 12px/1 Nunito,sans-serif;color:#B4552F;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Công thức đã cài đúng spec</div>
+<div style="font:400 13px/1.7 Nunito,sans-serif;color:#6B5346">base = floor(total/n), phần lẻ cộng 1¥ cho người đã chi nhiều nhất → Σ balance = 0. Ghép giao dịch greedy, tối đa n−1 lần chuyển.</div>
+</div>
+</div>
+</div>
+
+<div style="flex:0 0 auto;position:relative">
+<div style="position:relative;width:390px;height:800px;background:#1F1B2B;border-radius:52px;padding:11px;box-shadow:0 30px 60px -20px rgba(58,47,70,.45),0 0 0 2px #332C44">
+<div style="position:relative;width:100%;height:100%;border-radius:42px;overflow:hidden;background:#FFFBF5;display:flex;flex-direction:column">
+
+<div style="position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font:700 13px Nunito,sans-serif;color:#2E2A3B;z-index:40;pointer-events:none">
+<span>9:41</span>
+<span style="display:flex;gap:5px;align-items:center"><span style="width:16px;height:9px;border:1.5px solid #2E2A3B;border-radius:2px;display:inline-block"></span></span>
+</div>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;overflow-y:auto;padding:54px 20px 110px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px">
+<div>
+<div style="font:700 12px/1 Nunito,sans-serif;color:#B0A8BC;letter-spacing:.1em;text-transform:uppercase">Chào bạn 👋</div>
+<h2 style="margin:6px 0 0;font:800 28px/1.1 'Baloo 2',sans-serif">Sự kiện của tôi</h2>
+</div>
+<div style="width:52px;height:60px;animation:wk-bob 3s ease-in-out infinite"><dc-import name="Chara" src="assets/fox.png" bg="#FFE6CC" h="60" hint-size="52px,60px"></dc-import></div>
+</div>
+
+<sc-if value="{{ hasEvents }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ homeList }}" as="ev" hint-placeholder-count="2">
+<div style="background:#fff;border:1px solid #F1E7DD;border-radius:22px;padding:16px;box-shadow:0 3px 0 #F2E9E0;animation:wk-rise .3s ease both">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+<div style="min-width:0">
+<div style="font:700 18px/1.25 'Baloo 2',sans-serif;color:#2E2A3B">{{ ev.name }}</div>
+<div style="font:600 12px/1.4 Nunito,sans-serif;color:#9A93A8;margin-top:2px">{{ ev.dateText }} · {{ ev.countText }}</div>
+</div>
+<div style="flex:none;padding:5px 10px;border-radius:999px;font:800 10.5px/1.2 Nunito,sans-serif;white-space:nowrap;background:{{ ev.badgeBg }};color:{{ ev.badgeFg }}">{{ ev.badge }}</div>
+</div>
+<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px;gap:10px">
+<div style="display:flex;align-items:flex-end;gap:-2px">
+<sc-for list="{{ ev.avatars }}" as="p" hint-placeholder-count="3">
+<div style="width:34px;height:40px;margin-right:-6px"><dc-import name="Chara" src="{{ p.src }}" bg="{{ p.bg }}" name="{{ p.name }}" h="40" hint-size="34px,40px"></dc-import></div>
+</sc-for>
+</div>
+<div style="text-align:right">
+<div style="font:600 10px/1 Nunito,sans-serif;color:#B0A8BC;letter-spacing:.08em;text-transform:uppercase">Tổng chi</div>
+<div style="font:800 20px/1.1 'Baloo 2',sans-serif;color:#FF6B4A">{{ ev.totalText }}</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-top:14px">
+<button onClick="{{ ev.open }}" style="flex:1;min-height:44px;border:none;border-radius:14px;background:#2E2A3B;color:#fff;font:800 14px Nunito,sans-serif;cursor:pointer" style-hover="background:#453E58">Mở sự kiện</button>
+<button onClick="{{ ev.remove }}" style="width:44px;min-height:44px;border:1px solid #F1E7DD;border-radius:14px;background:#FFF8F1;color:#B0A8BC;font:800 15px Nunito,sans-serif;cursor:pointer" style-hover="color:#E84855;border-color:#F8C9CC">✕</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEmpty }}">
+<div style="margin-top:60px;text-align:center;padding:0 20px">
+<div style="display:flex;justify-content:center;gap:-6px;margin-bottom:18px">
+<div style="width:64px;height:74px;margin-right:-10px;transform:rotate(-8deg)"><dc-import name="Chara" src="assets/penguin.png" bg="#DCEBFF" h="74" hint-size="64px,74px"></dc-import></div>
+<div style="width:72px;height:82px;animation:wk-bob 2.6s ease-in-out infinite"><dc-import name="Chara" src="assets/bunny.png" bg="#FFE1EA" h="82" hint-size="72px,82px"></dc-import></div>
+<div style="width:64px;height:74px;margin-left:-10px;transform:rotate(8deg)"><dc-import name="Chara" src="assets/frog.png" bg="#DBF5E4" h="74" hint-size="64px,74px"></dc-import></div>
+</div>
+<div style="font:800 22px/1.2 'Baloo 2',sans-serif">Chưa có sự kiện nào</div>
+<div style="font:400 14px/1.6 Nunito,sans-serif;color:#9A93A8;margin-top:6px">Tạo sự kiện đầu tiên của bạn, rồi gửi link cho cả nhóm cùng nhập chi tiêu nhé!</div>
+</div>
+</sc-if>
+</div>
+
+<button onClick="{{ goCreate }}" style="position:absolute;right:20px;bottom:28px;height:56px;padding:0 22px;border:none;border-radius:999px;background:#FF6B4A;color:#fff;font:800 16px Nunito,sans-serif;box-shadow:0 10px 22px -6px rgba(255,107,74,.7);cursor:pointer;display:flex;align-items:center;gap:8px;z-index:30" style-hover="background:#F3552F">＋ Tạo sự kiện</button>
+</sc-if>
+
+<sc-if value="{{ isCreate }}">
+<div style="flex:1;overflow-y:auto;padding:54px 20px 120px">
+<button onClick="{{ goHome }}" style="min-height:44px;border:none;background:none;padding:0;font:800 14px Nunito,sans-serif;color:#9A93A8;cursor:pointer" style-hover="color:#2E2A3B">← Quay lại</button>
+<h2 style="margin:6px 0 20px;font:800 27px/1.15 'Baloo 2',sans-serif">{{ createTitle }}</h2>
+
+<label style="display:block;font:800 12px/1 Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">Tên sự kiện</label>
+<input value="{{ draftName }}" onChange="{{ setName }}" placeholder="VD: Đi Hakone tháng 3" style="width:100%;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;background:#fff;padding:0 14px;font:600 16px Nunito,sans-serif;color:#2E2A3B;outline:none" style-focus="border-color:#FF6B4A">
+
+<label style="display:block;font:800 12px/1 Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase;margin:16px 0 7px">Ngày diễn ra</label>
+<input type="date" value="{{ draftDate }}" onChange="{{ setDate }}" style="width:100%;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;background:#fff;padding:0 14px;font:600 16px Nunito,sans-serif;color:#2E2A3B;outline:none" style-focus="border-color:#FF6B4A">
+
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 7px">
+<label style="font:800 12px/1 Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase">Người tham gia</label>
+<span style="font:600 12px Nunito,sans-serif;color:#B0A8BC">{{ draftCountText }}</span>
+</div>
+<div style="display:flex;gap:8px">
+<input value="{{ draftPerson }}" onChange="{{ setPerson }}" onKeyDown="{{ personKey }}" placeholder="Nhập tên rồi bấm ＋" style="flex:1;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;background:#fff;padding:0 14px;font:600 16px Nunito,sans-serif;outline:none" style-focus="border-color:#FF6B4A">
+<button onClick="{{ addPerson }}" style="width:50px;min-height:50px;border:none;border-radius:16px;background:#2FBF9B;color:#fff;font:800 22px Nunito,sans-serif;cursor:pointer" style-hover="background:#26A686">＋</button>
+</div>
+<sc-if value="{{ createError }}">
+<div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#FFECEE;color:#C2374B;font:700 13px/1.4 Nunito,sans-serif">{{ createError }}</div>
+</sc-if>
+
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;background:#FFF3E7;border-radius:20px;padding:16px 10px;min-height:120px;align-content:flex-start">
+<sc-for list="{{ draftPeople }}" as="p" hint-placeholder-count="3">
+<div style="width:78px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;animation:wk-pop .25s ease both">
+<div onClick="{{ p.reroll }}" style="width:56px;height:64px;cursor:pointer" style-hover="transform:translateY(-3px)" title="Tap để đổi nhân vật"><dc-import name="Chara" src="{{ p.src }}" bg="{{ p.bg }}" name="{{ p.name }}" h="64" hint-size="56px,64px"></dc-import></div>
+<div style="font:700 12.5px/1.25 Nunito,sans-serif;color:#2E2A3B;text-align:center;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</div>
+<button onClick="{{ p.remove }}" style="position:absolute;top:-4px;right:4px;width:22px;height:22px;border:none;border-radius:50%;background:#fff;color:#B0A8BC;font:800 11px Nunito,sans-serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)" style-hover="color:#E84855">✕</button>
+</div>
+</sc-for>
+<sc-if value="{{ noPeople }}">
+<div style="width:100%;text-align:center;padding:24px 10px;font:600 13px/1.5 Nunito,sans-serif;color:#BCA898">Thêm ít nhất 2 người.<br>Mỗi người được gán một nhân vật ngẫu nhiên — tap để đổi.</div>
+</sc-if>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px 26px;background:linear-gradient(to top,#FFFBF5 60%,rgba(255,251,245,0))">
+<button onClick="{{ saveEvent }}" style="width:100%;min-height:54px;border:none;border-radius:18px;background:#FF6B4A;color:#fff;font:800 17px Nunito,sans-serif;cursor:pointer;box-shadow:0 8px 18px -6px rgba(255,107,74,.65)" style-hover="background:#F3552F">{{ saveLabel }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEvent }}">
+<div style="flex:1;overflow-y:auto;padding:54px 0 130px">
+<div style="padding:0 20px">
+<button onClick="{{ goHome }}" style="min-height:44px;border:none;background:none;padding:0;font:800 14px Nunito,sans-serif;color:#9A93A8;cursor:pointer" style-hover="color:#2E2A3B">← Sự kiện của tôi</button>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:4px">
+<div>
+<h2 style="margin:0;font:800 26px/1.15 'Baloo 2',sans-serif">{{ evName }}</h2>
+<div style="font:600 12.5px Nunito,sans-serif;color:#9A93A8;margin-top:2px">{{ evDateText }} · {{ evCountText }}</div>
+</div>
+<button onClick="{{ copyLink }}" style="flex:none;min-height:44px;padding:0 13px;border:1.5px solid #FFD9CE;border-radius:14px;background:#FFF1EC;color:#E0512F;font:800 12.5px Nunito,sans-serif;white-space:nowrap;cursor:pointer" style-hover="background:#FFE4DB">🔗 Link</button>
+</div>
+<div style="display:flex;gap:4px;margin-top:14px;flex-wrap:wrap">
+<sc-for list="{{ evPeople }}" as="p" hint-placeholder-count="3">
+<div style="width:74px;display:flex;flex-direction:column;align-items:center">
+<div style="width:44px;height:52px"><dc-import name="Chara" src="{{ p.src }}" bg="{{ p.bg }}" name="{{ p.name }}" h="52" hint-size="44px,52px"></dc-import></div>
+<div style="font:700 11.5px/1.2 Nunito,sans-serif;text-align:center;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position:sticky;top:-54px;z-index:20;margin:18px 0 0;padding:14px 20px;background:linear-gradient(120deg,#2E2A3B,#463E5C);color:#fff;border-radius:0">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="flex:none;white-space:nowrap;font:700 11.5px Nunito,sans-serif;letter-spacing:.1em;text-transform:uppercase;opacity:.7">Tổng chi tiêu</span>
+<span style="font:800 30px/1 'Baloo 2',sans-serif;color:#FFD166">{{ evTotalText }}</span>
+</div>
+</div>
+
+<div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ evExpenses }}" as="x" hint-placeholder-count="3">
+<div onClick="{{ x.edit }}" style="background:#fff;border:1px solid #F1E7DD;border-radius:18px;padding:12px 14px;box-shadow:0 2px 0 #F3EAE1;cursor:pointer" style-hover="border-color:#FFD9CE">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="display:flex;align-items:baseline;gap:8px;min-width:0">
+<span style="font:800 11px Nunito,sans-serif;color:#C9C1D4">{{ x.no }}</span>
+<span style="font:700 16px/1.3 Nunito,sans-serif;color:#2E2A3B">{{ x.title }}</span>
+</div>
+<span style="flex:none;font:800 18px/1 'Baloo 2',sans-serif">{{ x.amountText }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding-left:18px">
+<div style="width:24px;height:28px"><dc-import name="Chara" src="{{ x.src }}" bg="{{ x.bg }}" name="{{ x.name }}" h="28" hint-size="24px,28px"></dc-import></div>
+<span style="font:600 13px Nunito,sans-serif;color:#7A7288">{{ x.payerName }} đã chi</span>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ noExpenses }}">
+<div style="text-align:center;padding:26px 16px;border:1.5px dashed #EFE0D3;border-radius:20px;font:600 13.5px/1.6 Nunito,sans-serif;color:#BCA898">Chưa có khoản chi nào.<br>Bấm “Thêm khoản chi” để bắt đầu ghi chép.</div>
+</sc-if>
+<button onClick="{{ openSheet }}" style="min-height:50px;border:1.5px dashed #C7E8DC;border-radius:18px;background:#F1FBF7;color:#17A673;font:800 15px Nunito,sans-serif;cursor:pointer" style-hover="background:#E4F6EF">＋ Thêm khoản chi</button>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px 26px;background:linear-gradient(to top,#FFFBF5 65%,rgba(255,251,245,0))">
+<button onClick="{{ goSettle }}" disabled="{{ settleDisabled }}" style="width:100%;min-height:54px;border:none;border-radius:18px;background:{{ settleBg }};color:#fff;font:800 17px Nunito,sans-serif;cursor:pointer;box-shadow:0 8px 18px -6px rgba(47,191,155,.6)">Quyết toán →</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettle }}">
+<div style="flex:1;overflow-y:auto;padding:54px 20px 40px">
+<button onClick="{{ backToEvent }}" style="min-height:44px;border:none;background:none;padding:0;font:800 14px Nunito,sans-serif;color:#9A93A8;cursor:pointer" style-hover="color:#2E2A3B">← {{ evName }}</button>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+<h2 style="margin:4px 0 0;font:800 27px/1.1 'Baloo 2',sans-serif">Quyết toán</h2>
+<button onClick="{{ copyLink }}" style="flex:none;min-height:44px;padding:0 13px;border:1.5px solid #FFD9CE;border-radius:14px;background:#FFF1EC;color:#E0512F;font:800 12.5px Nunito,sans-serif;white-space:nowrap;cursor:pointer" style-hover="background:#FFE4DB">🔗 Link</button>
+</div>
+<div style="font:600 12.5px Nunito,sans-serif;color:#9A93A8;margin-top:4px">Tổng {{ evTotalText }} · {{ evCountText }} · mỗi người gánh {{ shareText }}</div>
+
+<div style="margin-top:18px;background:#fff;border:1px solid #F1E7DD;border-radius:22px;overflow:hidden;box-shadow:0 3px 0 #F2E9E0">
+<div style="display:grid;grid-template-columns:26px 1fr 92px 50px;gap:6px;padding:10px 14px;background:#FFF3E7;font:800 10px Nunito,sans-serif;color:#A8917F;letter-spacing:.07em;text-transform:uppercase">
+<span>#</span><span>Người dùng</span><span style="text-align:right">Nhận / trả</span><span style="text-align:right">T.trạng</span>
+</div>
+<sc-for list="{{ balanceRows }}" as="r" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:26px 1fr 92px 50px;gap:6px;padding:10px 14px;align-items:center;border-top:1px solid #F7F0E9">
+<span style="font:800 12px Nunito,sans-serif;color:#C9C1D4">{{ r.no }}</span>
+<div style="display:flex;align-items:center;gap:8px;min-width:0">
+<div style="width:30px;height:36px;flex:none"><dc-import name="Chara" src="{{ r.src }}" bg="{{ r.bg }}" name="{{ r.name }}" h="36" hint-size="30px,36px"></dc-import></div>
+<span style="font:700 14px Nunito,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+</div>
+<span style="text-align:right;font:800 16px/1 'Baloo 2',sans-serif;color:{{ r.amountColor }}">{{ r.amountText }}</span>
+<span style="text-align:right;font:800 11.5px Nunito,sans-serif;color:#17A673">{{ r.status }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:22px;font:800 12px Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase">Gợi ý chuyển tiền</div>
+<div style="font:400 12.5px/1.5 Nunito,sans-serif;color:#9A93A8;margin-top:3px">{{ transferHint }}</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+<sc-for list="{{ transferRows }}" as="t" hint-placeholder-count="2">
+<div style="background:{{ t.bg }};border:1.5px solid {{ t.border }};border-radius:18px;padding:11px 12px;display:flex;align-items:center;gap:8px">
+<div style="width:32px;height:38px;flex:none"><dc-import name="Chara" src="{{ t.fromSrc }}" bg="{{ t.fromBg }}" name="{{ t.fromName }}" h="38" hint-size="32px,38px"></dc-import></div>
+<span style="font:700 13px Nunito,sans-serif;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.fromName }}</span>
+<span style="font:800 15px Nunito,sans-serif;color:#C9C1D4">→</span>
+<div style="width:32px;height:38px;flex:none"><dc-import name="Chara" src="{{ t.toSrc }}" bg="{{ t.toBg }}" name="{{ t.toName }}" h="38" hint-size="32px,38px"></dc-import></div>
+<span style="font:700 13px Nunito,sans-serif;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.toName }}</span>
+<span style="flex:1;text-align:right;font:800 16px/1 'Baloo 2',sans-serif;color:#2E2A3B">{{ t.amountText }}</span>
+<button onClick="{{ t.toggle }}" style="flex:none;min-width:56px;min-height:34px;border:1.5px solid {{ t.btnBorder }};border-radius:11px;background:{{ t.btnBg }};color:{{ t.btnFg }};font:800 12px Nunito,sans-serif;cursor:pointer">{{ t.btnLabel }}</button>
+</div>
+</sc-for>
+<sc-if value="{{ noTransfers }}">
+<div style="text-align:center;padding:22px 16px;border:1.5px dashed #C7E8DC;border-radius:20px;background:#F1FBF7;font:800 15px Nunito,sans-serif;color:#17A673">Mọi người đã chia đều rồi! 🎉</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ allDone }}">
+<div style="margin-top:20px;text-align:center;padding:18px 14px;border-radius:22px;background:linear-gradient(135deg,#FFF1D6,#FFE3EC);border:1.5px solid #FFD0AE;animation:wk-pop .4s ease both">
+<div style="display:flex;justify-content:center;margin-bottom:8px">
+<div style="width:62px;height:72px;animation:wk-bob 2.2s ease-in-out infinite"><dc-import name="Chara" src="assets/bunny.png" bg="#FFE1EA" h="72" hint-size="62px,72px"></dc-import></div>
+</div>
+<div style="font:800 18px/1.35 'Baloo 2',sans-serif;color:#E11D48">Chúc mừng bạn đã có chuyến đi vui vẻ! またね!</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(46,42,59,.42);z-index:50"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:51;background:#fff;border-radius:28px 28px 0 0;padding:20px 20px 26px;box-shadow:0 -10px 40px -10px rgba(46,42,59,.35);animation:wk-rise .25s ease both">
+<div style="width:44px;height:4px;border-radius:2px;background:#EDE6DE;margin:0 auto 14px"></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="font:800 20px 'Baloo 2',sans-serif">{{ sheetTitle }}</div>
+<sc-if value="{{ sheetEditing }}">
+<button onClick="{{ deleteExpense }}" style="min-height:40px;padding:0 12px;border:1.5px solid #F8C9CC;border-radius:12px;background:#FFF4F5;color:#D6384C;font:800 12.5px Nunito,sans-serif;cursor:pointer">Xóa</button>
+</sc-if>
+</div>
+<label style="display:block;font:800 11.5px Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase;margin:16px 0 6px">Tên đồ / việc đã chi</label>
+<input value="{{ sheetItemTitle }}" onChange="{{ setSheetTitle }}" placeholder="VD: Tiền đồ nướng" style="width:100%;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;padding:0 14px;font:600 16px Nunito,sans-serif;outline:none" style-focus="border-color:#FF6B4A">
+<label style="display:block;font:800 11.5px Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 6px">Số tiền (JPY)</label>
+<div style="position:relative">
+<span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font:800 17px 'Baloo 2',sans-serif;color:#C9C1D4">¥</span>
+<input inputmode="numeric" value="{{ sheetAmount }}" onChange="{{ setSheetAmount }}" placeholder="0" style="width:100%;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;padding:0 14px 0 32px;font:800 18px 'Baloo 2',sans-serif;outline:none" style-focus="border-color:#FF6B4A">
+</div>
+<label style="display:block;font:800 11.5px Nunito,sans-serif;color:#7A7288;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 6px">Người đã chi</label>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ sheetPayers }}" as="p" hint-placeholder-count="3">
+<div onClick="{{ p.pick }}" style="display:flex;align-items:center;gap:6px;padding:6px 12px 6px 6px;border:2px solid {{ p.border }};background:{{ p.chipBg }};border-radius:999px;cursor:pointer;min-height:44px">
+<div style="width:28px;height:34px"><dc-import name="Chara" src="{{ p.src }}" bg="{{ p.bg }}" name="{{ p.name }}" h="34" hint-size="28px,34px"></dc-import></div>
+<span style="font:700 13.5px Nunito,sans-serif">{{ p.name }}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ sheetError }}">
+<div style="margin-top:12px;padding:10px 12px;border-radius:14px;background:#FFECEE;color:#C2374B;font:700 13px Nunito,sans-serif">{{ sheetError }}</div>
+</sc-if>
+<button onClick="{{ saveExpense }}" style="width:100%;min-height:52px;margin-top:16px;border:none;border-radius:18px;background:#FF6B4A;color:#fff;font:800 16.5px Nunito,sans-serif;cursor:pointer" style-hover="background:#F3552F">Lưu khoản chi</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}">
+<div style="position:absolute;left:20px;right:20px;bottom:96px;z-index:60;padding:13px 16px;border-radius:16px;background:#2E2A3B;color:#fff;font:700 13.5px/1.4 Nunito,sans-serif;text-align:center;animation:wk-rise .2s ease both">{{ toast }}</div>
+</sc-if>
+
+<sc-if value="{{ confetti }}">
+<div style="position:absolute;inset:0;z-index:70;pointer-events:none;overflow:hidden">{{ confettiEls }}</div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const CHARS = [
+  {id:'cat',src:'assets/cat.png',bg:'#FFE6CC',color:'#F0A356'},
+  {id:'bunny',src:'assets/bunny.png',bg:'#FFE1EA',color:'#F58BA6'},
+  {id:'frog',src:'assets/frog.png',bg:'#DBF5E4',color:'#5FBF87'},
+  {id:'penguin',src:'assets/penguin.png',bg:'#DCEBFF',color:'#6E9FE0'},
+  {id:'bear',src:'assets/bear.png',bg:'#F0E2D4',color:'#B08560'},
+  {id:'pig',src:'assets/pig.png',bg:'#FFE3EE',color:'#EF8FB3'},
+  {id:'panda',src:'assets/panda.png',bg:'#ECECF2',color:'#8A8898'},
+  {id:'koala',src:'assets/koala.png',bg:'#E6EAF0',color:'#8798AB'},
+  {id:'fox',src:'assets/fox.png',bg:'#FFE0CE',color:'#EE8C56'},
+  {id:'puppy',src:'assets/puppy.png',bg:'#F7E9D8',color:'#C79A6B'}
+];
+const fmt = n => '¥' + Math.round(n).toLocaleString('en-US');
+const uid = () => Math.random().toString(36).slice(2, 9);
+const charOf = id => CHARS.find(c => c.id === id) || CHARS[0];
+
+function settle(ev) {
+  const ps = ev.participants, n = ps.length;
+  const paid = {}; ps.forEach(p => { paid[p.id] = 0; });
+  ev.expenses.forEach(e => { if (paid[e.payerId] != null) paid[e.payerId] += e.amount; });
+  const total = ev.expenses.reduce((s, e) => s + e.amount, 0);
+  const share = {}; const bal = {};
+  if (n > 0) {
+    const base = Math.floor(total / n), rem = total - base * n;
+    ps.map((p, i) => ({ p, i })).sort((a, b) => (paid[b.p.id] - paid[a.p.id]) || (a.i - b.i))
+      .forEach((o, k) => { share[o.p.id] = base + (k < rem ? 1 : 0); });
+    ps.forEach(p => { bal[p.id] = paid[p.id] - share[p.id]; });
+  }
+  const work = {}; ps.forEach(p => { work[p.id] = bal[p.id]; });
+  const idx = {}; ps.forEach((p, i) => { idx[p.id] = i; });
+  let cred = ps.filter(p => work[p.id] > 0).sort((a, b) => (work[b.id] - work[a.id]) || (idx[a.id] - idx[b.id]));
+  let debt = ps.filter(p => work[p.id] < 0).sort((a, b) => (-work[b.id] + work[a.id] > 0 ? 1 : -1) || 0);
+  debt = ps.filter(p => work[p.id] < 0).sort((a, b) => (Math.abs(work[b.id]) - Math.abs(work[a.id])) || (idx[a.id] - idx[b.id]));
+  const transfers = [];
+  let ci = 0, di = 0;
+  while (ci < cred.length && di < debt.length) {
+    const c = cred[ci], d = debt[di];
+    const amount = Math.min(work[c.id], -work[d.id]);
+    transfers.push({ key: d.id + ':' + c.id, from: d, to: c, amount });
+    work[c.id] -= amount; work[d.id] += amount;
+    if (work[c.id] === 0) ci++;
+    if (work[d.id] === 0) di++;
+  }
+  return { total, share, bal, transfers, paid };
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const mk = (name, date, people, ex) => {
+      const parts = people.map((nm, i) => ({ id: uid(), name: nm, characterId: CHARS[i].id }));
+      return { id: uid(), shareId: uid() + uid(), name, date,
+        participants: parts,
+        expenses: ex.map(e => ({ id: uid(), title: e[0], amount: e[1], payerId: parts[e[2]].id })),
+        done: {}, settledAt: null };
+    };
+    this.state = {
+      screen: 'home', activeId: null, editingEvent: false,
+      events: [
+        mk('Đi Hakone tháng 3', '2026-03-08', ['Linh', 'Minh', 'Trang'],
+          [['Vé tàu Romancecar', 5000, 0], ['Onsen', 3000, 1], ['Cơm trưa', 2000, 2]]),
+        mk('Tiệc BBQ bờ sông', '2026-02-14', ['Linh', 'Khoa', 'Mai', 'Nam'],
+          [['Đồ nướng', 9200, 0], ['Bia & nước', 4300, 1], ['Than + dụng cụ', 2500, 2]])
+      ],
+      draft: null, person: '', createError: '',
+      sheet: null, sheetError: '', toast: '', confetti: false
+    };
+  }
+  ev() { return this.state.events.find(e => e.id === this.state.activeId); }
+  patchEvent(id, fn) {
+    this.setState(s => ({ events: s.events.map(e => e.id === id ? fn({ ...e }) : e) }));
+  }
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2200);
+  }
+  freeChars(people) {
+    const used = people.map(p => p.characterId);
+    const free = CHARS.filter(c => used.indexOf(c.id) < 0);
+    return free.length ? free : CHARS;
+  }
+  dateText(d) { const p = String(d).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; }
+
+  renderVals() {
+    const s = this.state;
+    const ev = this.ev();
+    const goHome = () => this.setState({ screen: 'home', draft: null, sheet: null, createError: '' });
+
+    // ---- home ----
+    const homeList = [...s.events].sort((a, b) => (a.date < b.date ? 1 : -1)).map(e => {
+      const total = e.expenses.reduce((x, y) => x + y.amount, 0);
+      const doneAll = !!e.settledAt;
+      return {
+        name: e.name, dateText: this.dateText(e.date),
+        countText: e.participants.length + ' người', totalText: fmt(total),
+        badge: doneAll ? 'Đã xong' : 'Chưa quyết toán',
+        badgeBg: doneAll ? '#DFF6EC' : '#FFEEE3', badgeFg: doneAll ? '#17A673' : '#D2652F',
+        avatars: e.participants.slice(0, 4).map(p => { const c = charOf(p.characterId); return { src: c.src, bg: c.bg, name: p.name }; }),
+        open: () => this.setState({ screen: 'event', activeId: e.id }),
+        remove: () => this.setState(st => ({ events: st.events.filter(x => x.id !== e.id), toast: 'Đã xóa khỏi máy này' }))
+      };
+    });
+
+    // ---- draft (create / edit) ----
+    const d = s.draft;
+    const draftPeople = (d ? d.participants : []).map((p, i) => {
+      const c = charOf(p.characterId);
+      return { name: p.name, src: c.src, bg: c.bg,
+        reroll: () => this.setState(st => {
+          const others = st.draft.participants.filter((_, k) => k !== i);
+          const free = this.freeChars(others).filter(c2 => c2.id !== p.characterId);
+          const pick = free[Math.floor(Math.random() * free.length)] || CHARS[0];
+          const list = st.draft.participants.map((q, k) => k === i ? { ...q, characterId: pick.id } : q);
+          return { draft: { ...st.draft, participants: list } };
+        }),
+        remove: () => this.setState(st => ({ draft: { ...st.draft, participants: st.draft.participants.filter((_, k) => k !== i) } })) };
+    });
+    const addPerson = () => {
+      const name = (s.person || '').trim();
+      if (!name) return this.setState({ createError: 'Nhập tên người tham gia đã nhé!' });
+      if (s.draft.participants.some(p => p.name.toLowerCase() === name.toLowerCase()))
+        return this.setState({ createError: 'Tên này đã có trong sự kiện rồi.' });
+      const free = this.freeChars(s.draft.participants);
+      const pick = free[Math.floor(Math.random() * free.length)];
+      this.setState(st => ({ draft: { ...st.draft, participants: [...st.draft.participants, { id: uid(), name, characterId: pick.id }] }, person: '', createError: '' }));
+    };
+    const saveEvent = () => {
+      const dr = s.draft;
+      if (!dr.name.trim()) return this.setState({ createError: 'Sự kiện cần có tên.' });
+      if (!dr.date) return this.setState({ createError: 'Chọn ngày diễn ra nhé.' });
+      if (dr.participants.length < 2) return this.setState({ createError: 'Cần tối thiểu 2 người tham gia.' });
+      if (s.editingEvent) {
+        this.patchEvent(dr.id, e => ({ ...e, name: dr.name, date: dr.date, participants: dr.participants, done: {}, settledAt: null }));
+        this.setState({ screen: 'event', activeId: dr.id, draft: null, createError: '' });
+        this.flash('Đã lưu. Kết quả quyết toán sẽ được tính lại.');
+      } else {
+        const nev = { ...dr, expenses: [], done: {}, settledAt: null };
+        this.setState(st => ({ events: [nev, ...st.events], screen: 'event', activeId: nev.id, draft: null, createError: '' }));
+        this.flash('Đã tạo sự kiện — link chia sẻ đã sẵn sàng!');
+      }
+    };
+
+    // ---- event ----
+    const evTotal = ev ? ev.expenses.reduce((x, y) => x + y.amount, 0) : 0;
+    const evExpenses = ev ? ev.expenses.map((x, i) => {
+      const p = ev.participants.find(q => q.id === x.payerId) || { name: '?' };
+      const c = charOf(p.characterId);
+      return { no: i + 1, title: x.title, amountText: fmt(x.amount), payerName: p.name,
+        src: c.src, bg: c.bg, name: p.name,
+        edit: () => this.setState({ sheet: { id: x.id, title: x.title, amount: String(x.amount), payerId: x.payerId }, sheetError: '' }) };
+    }) : [];
+
+    // ---- settlement ----
+    const res = ev ? settle(ev) : null;
+    const transfers = res ? res.transfers : [];
+    const doneMap = ev ? ev.done : {};
+    const personDone = pid => res.bal[pid] === 0 ||
+      transfers.filter(t => t.from.id === pid || t.to.id === pid).every(t => doneMap[t.key]);
+    const allDone = !!ev && !!res && ev.expenses.length > 0 && transfers.every(t => doneMap[t.key]);
+    const balanceRows = res ? [...ev.participants].sort((a, b) => {
+      const ga = res.bal[a.id] > 0 ? 0 : 1, gb = res.bal[b.id] > 0 ? 0 : 1;
+      return ga - gb || Math.abs(res.bal[b.id]) - Math.abs(res.bal[a.id]);
+    }).map((p, i) => {
+      const c = charOf(p.characterId), b = res.bal[p.id];
+      return { no: i + 1, name: p.name, src: c.src, bg: c.bg,
+        amountText: b > 0 ? '+' + Math.abs(b).toLocaleString('en-US') : b < 0 ? '−' + Math.abs(b).toLocaleString('en-US') : '0',
+        amountColor: b > 0 ? '#17A673' : b < 0 ? '#E84855' : '#B0A8BC',
+        status: personDone(p.id) ? 'Done' : '' };
+    }) : [];
+    const transferRows = transfers.map(t => {
+      const fc = charOf(t.from.characterId), tc = charOf(t.to.characterId), on = !!doneMap[t.key];
+      return { fromName: t.from.name, toName: t.to.name, amountText: fmt(t.amount),
+        fromSrc: fc.src, fromBg: fc.bg, toSrc: tc.src, toBg: tc.bg,
+        bg: on ? '#F1FBF7' : '#fff', border: on ? '#C7E8DC' : '#F1E7DD',
+        btnLabel: on ? '✓ Done' : 'Done', btnBg: on ? '#17A673' : '#fff',
+        btnFg: on ? '#fff' : '#9A93A8', btnBorder: on ? '#17A673' : '#E9E0D7',
+        toggle: () => {
+          const nextDone = { ...doneMap, [t.key]: !doneMap[t.key] };
+          const complete = transfers.every(x => nextDone[x.key]);
+          this.patchEvent(ev.id, e => ({ ...e, done: nextDone, settledAt: complete ? new Date().toISOString() : null }));
+          if (complete && !ev.settledAt) {
+            this.setState({ confetti: true });
+            clearTimeout(this._c); this._c = setTimeout(() => this.setState({ confetti: false }), 4200);
+          }
+        } };
+    });
+    const confettiEls = React.createElement('div', { style: { position: 'absolute', inset: 0 } },
+      Array.from({ length: 60 }).map((_, i) => {
+        const cols = ['#FF6B4A', '#FFD166', '#2FBF9B', '#8AB6FF', '#FF8FA3', '#C9A7FF'];
+        return React.createElement('div', { key: i, style: {
+          position: 'absolute', left: (Math.random() * 100) + '%', top: '-5%',
+          width: (6 + Math.random() * 7) + 'px', height: (10 + Math.random() * 8) + 'px',
+          background: cols[i % cols.length], borderRadius: i % 3 === 0 ? '50%' : '2px',
+          animation: 'wk-fall ' + (2.2 + Math.random() * 1.8) + 's linear ' + (Math.random() * 1.2) + 's both'
+        } });
+      }));
+
+    // ---- expense sheet ----
+    const sh = s.sheet;
+    const sheetPayers = ev ? ev.participants.map(p => {
+      const c = charOf(p.characterId), on = sh && sh.payerId === p.id;
+      return { name: p.name, src: c.src, bg: c.bg,
+        border: on ? '#FF6B4A' : '#F0E6DC', chipBg: on ? '#FFF1EC' : '#fff',
+        pick: () => this.setState(st => ({ sheet: { ...st.sheet, payerId: p.id }, sheetError: '' })) };
+    }) : [];
+    const saveExpense = () => {
+      const amt = parseInt(String(sh.amount).replace(/[^0-9]/g, ''), 10);
+      if (!sh.title.trim()) return this.setState({ sheetError: 'Nhập tên đồ/việc đã chi.' });
+      if (!amt || amt <= 0) return this.setState({ sheetError: 'Số tiền phải là số nguyên lớn hơn 0.' });
+      if (!sh.payerId) return this.setState({ sheetError: 'Chọn người đã chi.' });
+      const wasSettled = !!ev.settledAt || Object.keys(ev.done).length > 0;
+      this.patchEvent(ev.id, e => {
+        const list = sh.id ? e.expenses.map(x => x.id === sh.id ? { ...x, title: sh.title.trim(), amount: amt, payerId: sh.payerId } : x)
+          : [...e.expenses, { id: uid(), title: sh.title.trim(), amount: amt, payerId: sh.payerId }];
+        return { ...e, expenses: list, done: {}, settledAt: null };
+      });
+      this.setState({ sheet: null, sheetError: '' });
+      this.flash(wasSettled ? 'Đã lưu — kết quả quyết toán được tính lại.' : 'Đã thêm khoản chi!');
+    };
+
+    return {
+      isHome: s.screen === 'home', isCreate: s.screen === 'create', isEvent: s.screen === 'event', isSettle: s.screen === 'settle',
+      hasEvents: s.events.length > 0, isEmpty: s.events.length === 0, homeList, goHome,
+      goCreate: () => this.setState({ screen: 'create', editingEvent: false, person: '', createError: '',
+        draft: { id: uid(), shareId: uid() + uid(), name: '', date: new Date().toISOString().slice(0, 10), participants: [] } }),
+      createTitle: s.editingEvent ? 'Sửa sự kiện' : 'Tạo sự kiện mới',
+      saveLabel: s.editingEvent ? 'Lưu thay đổi' : 'Tạo & lấy link chia sẻ',
+      draftName: d ? d.name : '', draftDate: d ? d.date : '',
+      draftCountText: (d ? d.participants.length : 0) + '/10 người',
+      draftPeople, noPeople: !d || d.participants.length === 0,
+      draftPerson: s.person, createError: s.createError,
+      setName: e => this.setState(st => ({ draft: { ...st.draft, name: e.target.value }, createError: '' })),
+      setDate: e => this.setState(st => ({ draft: { ...st.draft, date: e.target.value } })),
+      setPerson: e => this.setState({ person: e.target.value, createError: '' }),
+      personKey: e => { if (e.key === 'Enter') { e.preventDefault(); addPerson(); } },
+      addPerson, saveEvent,
+
+      evName: ev ? ev.name : '', evDateText: ev ? this.dateText(ev.date) : '',
+      evCountText: ev ? ev.participants.length + ' người' : '',
+      evTotalText: fmt(evTotal),
+      evPeople: ev ? ev.participants.map(p => { const c = charOf(p.characterId); return { name: p.name, src: c.src, bg: c.bg }; }) : [],
+      evExpenses, noExpenses: !!ev && ev.expenses.length === 0,
+      settleDisabled: !ev || ev.expenses.length === 0,
+      settleBg: (!ev || ev.expenses.length === 0) ? '#CFC8D6' : '#2FBF9B',
+      goSettle: () => { if (ev && ev.expenses.length) this.setState({ screen: 'settle', sheet: null, sheetError: '' }); },
+      backToEvent: () => this.setState({ screen: 'event', sheet: null, sheetError: '' }),
+      copyLink: () => this.flash('Đã sao chép link: warikan.app/e/' + (ev ? ev.shareId.slice(0, 10) : '')),
+      openSheet: () => this.setState({ sheet: { id: null, title: '', amount: '', payerId: ev.participants[0].id }, sheetError: '' }),
+      closeSheet: () => this.setState({ sheet: null, sheetError: '' }),
+      sheetOpen: !!sh, sheetEditing: !!(sh && sh.id),
+      sheetTitle: sh && sh.id ? 'Sửa khoản chi' : 'Thêm khoản chi',
+      sheetItemTitle: sh ? sh.title : '',
+      sheetAmount: sh ? (sh.amount ? Number(String(sh.amount).replace(/[^0-9]/g, '') || 0).toLocaleString('en-US') : '') : '',
+      setSheetTitle: e => this.setState(st => ({ sheet: { ...st.sheet, title: e.target.value }, sheetError: '' })),
+      setSheetAmount: e => this.setState(st => ({ sheet: { ...st.sheet, amount: e.target.value.replace(/[^0-9]/g, '') }, sheetError: '' })),
+      sheetPayers, sheetError: s.sheetError, saveExpense,
+      deleteExpense: () => { this.patchEvent(ev.id, e => ({ ...e, expenses: e.expenses.filter(x => x.id !== sh.id), done: {}, settledAt: null })); this.setState({ sheet: null }); this.flash('Đã xóa khoản chi'); },
+
+      shareText: res && ev.participants.length ? fmt(res.share[ev.participants[0].id]) : fmt(0),
+      balanceRows, transferRows, noTransfers: !!ev && transfers.length === 0,
+      transferHint: transfers.length ? 'Tối đa ' + Math.max(0, ev.participants.length - 1) + ' lần chuyển khoản. Tick Done sau khi đã chuyển.' : '',
+      allDone, confetti: s.confetti, confettiEls, toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
