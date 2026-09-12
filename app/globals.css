@@ -8,7 +8,10 @@
  * nên không có khối prefers-color-scheme.
  */
 
-@theme inline {
+/* Dùng @theme (không phải @theme inline): token được phát ra :root thành biến
+   CSS thật, nên vừa sinh utility (bg-primary, text-success...) vừa dùng được
+   trong gradient/shadow bằng var(--color-...). */
+@theme {
   /* --- Chữ --- */
   --color-ink: #2e2a3b; /* text chính */
   --color-muted: #7a7288; /* text phụ */
@@ -61,9 +64,12 @@
   --color-foreground: #2e2a3b;
 
   /* --- Font --- */
-  --font-display: var(--font-display), "Baloo 2", system-ui, sans-serif; /* heading + số tiền */
-  --font-body: var(--font-body), Nunito, system-ui, sans-serif; /* UI + body */
-  --font-sans: var(--font-body), Nunito, system-ui, sans-serif;
+  /* Vế phải phải là biến do next/font sinh ra (--font-baloo / --font-nunito),
+     KHÔNG được trùng tên với token bên trái, nếu không sẽ tự tham chiếu vòng
+     và làm hỏng cả khối @theme. */
+  --font-display: var(--font-baloo), "Baloo 2", system-ui, sans-serif; /* heading + số tiền */
+  --font-body: var(--font-nunito), Nunito, system-ui, sans-serif; /* UI + body */
+  --font-sans: var(--font-nunito), Nunito, system-ui, sans-serif;
 
   /* --- Bo góc --- */
   --radius-input: 16px;

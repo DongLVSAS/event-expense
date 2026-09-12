@@ -1,7 +1,7 @@
 # Handoff: Warikan — Ghi chép & quyết toán chi phí buổi đi chơi
 
 ## Overview
-Web app mobile-first, không đăng nhập, để một nhóm bạn ghi chép chi tiêu của một buổi đi chơi rồi quyết toán "ai trả ai bao nhiêu". Mỗi sự kiện có một link chia sẻ; ai có link đều nhập và xem được. Mỗi người tham gia được gán một nhân vật động vật để dễ nhận diện. Tiền tệ JPY, toàn bộ tính toán bằng số nguyên. Ngôn ngữ UI: tiếng Việt.
+Web app mobile-first, không đăng nhập, để một nhóm bạn lên danh sách những món **cần chi**, ghi chép những khoản **đã chi**, rồi quyết toán "ai trả ai bao nhiêu". Mỗi sự kiện có một link chia sẻ; ai có link đều nhập và xem được. Mỗi người tham gia được gán một nhân vật động vật để dễ nhận diện. Tiền tệ JPY, toàn bộ tính toán bằng số nguyên. Ngôn ngữ UI: tiếng Việt.
 
 ## About the Design Files
 Các file trong bundle này là **design reference viết bằng HTML** — prototype thể hiện đúng look & behavior mong muốn, **không phải production code để copy trực tiếp**. Nhiệm vụ là **dựng lại các thiết kế này trong codebase đích** (React/Next, Vue, SwiftUI, native…) theo pattern & thư viện đã có ở đó. Nếu chưa có codebase, hãy chọn framework phù hợp nhất (gợi ý: React + TypeScript + Vite, hoặc Next.js nếu cần link chia sẻ server-side) rồi implement.
@@ -103,10 +103,23 @@ Mục đích: đặt tên, ngày, thêm người tham gia.
 - CTA dưới cùng (có gradient fade nền): "Tạo & lấy link chia sẻ" / "Lưu thay đổi", cao 54px.
 - Validation: tên bắt buộc; ngày bắt buộc; ≥2 người; không trùng tên (case-insensitive); tối đa 10 người (bằng số nhân vật).
 
-### 3. Event detail — danh sách chi tiêu
+### 3. Event detail — danh sách chi tiêu (2 tabs)
 - "← Sự kiện của tôi"; H2 tên sự kiện + meta; nút "🔗 Sao chép link" (pill `#FFF1EC`, `nowrap`).
 - Avatar strip: cột 74px, avatar 44px + tên 11.5px (ellipsis, max-width 72px).
-- **Sticky total bar**: full-bleed, gradient tối, `position:sticky; top:-54px`, padding `14px 20px`; label "TỔNG CHI TIÊU" (`flex:none; nowrap`, opacity .7) + số tiền Baloo 2 800 30px màu `#FFD166`.
+
+#### Tab bar (ngay dưới avatar strip)
+Segmented control: track bg `#F4EDE5`, radius 16px, padding 4px, gap 6px, margin `16px 20px 0`. Mỗi tab `flex:1`, min-height 44px, radius 13px, Nunito 800 14px. Tab active: bg `#fff`, text `#2E2A3B`, shadow `0 2px 6px -2px rgba(46,42,59,.22)`. Tab inactive: bg transparent, text `#9A8E82`. Mỗi label kèm counter nhỏ (Nunito 800 12px, `opacity:.6`): tab 1 = `đã mua/tổng` (vd `3/4`, ẩn khi rỗng), tab 2 = số khoản chi.
+- **Tab 1 "Cần chi"** (default) — checklist những món *cần mua*, **không có số tiền, không có người chi**:
+  - Hàng thêm nhanh: input (placeholder `VD: Than nướng, đá lạnh…`, cao 50px, Enter = thêm) + nút vuông 50px teal "＋".
+  - Item row (`wk-rise`): nút tick 30×30 radius 10px border 2px ở trái → tên món (Nunito 700 15.5px) → nhãn "Đã mua" (chỉ khi đã tick) → nút "✕" 34px xóa.
+    - Chưa mua: card bg `#fff`, border `#F1E7DD`, shadow `0 2px 0 #F3EAE1`; ô tick bg `#fff`, border `#E3D9CE`, trống.
+    - **Đã mua: card bg `#E8F8EF`, border `#BDE6CE`, shadow `0 2px 0 #D6EFE0`; tên đổi `#17805C` + `line-through`; ô tick bg+border `#17A673` với "✓" trắng; nhãn pill "Đã mua" bg `#DFF6EC` / text `#17A673`.**
+  - Empty: khung dashed `#EFE0D3` — "Chưa có gì trong danh sách cần chi. / Ghi trước những món cần mua, tick khi đã mua xong."
+  - Footnote `#B0A8BC` 12.5px: "Danh sách này chỉ để nhắc nhau cần mua gì — số tiền ghi ở tab "Đã chi"."
+  - Tick là **toggle thuần**, độc lập hoàn toàn với expenses: không tạo/sửa khoản chi, không ảnh hưởng quyết toán.
+- **Tab 2 "Đã chi"** — nội dung ghi chép chi tiêu (total bar + expense list + nút thêm khoản chi), mô tả dưới đây.
+- **[CHỦ DỰ ÁN ĐÈ LÊN HANDOFF]** Nút "Quyết toán →" **chỉ hiện ở tab "Đã chi"**, không hiện ở tab "Cần chi" — xem `docs/screens/03-event-detail.md` §7.
+- **Sticky total bar** (trong tab 2): full-bleed, gradient tối, `position:sticky; top:-54px`, padding `14px 20px`; label "TỔNG CHI TIÊU" (`flex:none; nowrap`, opacity .7) + số tiền Baloo 2 800 30px màu `#FFD166`.
 - Expense card (radius 18px, padding 12px 14px, click = mở sheet sửa): số thứ tự nhạt + tên khoản chi (Nunito 700 16px) + số tiền phải (Baloo 2 800 18px); dòng dưới: avatar 24px + "`<tên>` đã chi".
 - Empty: khung dashed `#EFE0D3` radius 20px.
 - Nút "＋ Thêm khoản chi": dashed teal, bg `#F1FBF7`, cao 50px.
@@ -126,6 +139,8 @@ Mục đích: đặt tên, ngày, thêm người tham gia.
 - Chọn người đã chi: chip pill 44px, avatar 28px + tên; chip đang chọn: border 2px coral + bg `#FFF1EC`.
 - Nút "Lưu khoản chi" coral 52px. Validation: tên bắt buộc; số tiền là số nguyên > 0; phải chọn người.
 
+Lưu ý: total bar và expense list **chỉ render trong tab "Đã chi"**; nút "＋ Thêm khoản chi" cũng nằm trong tab này. ~~CTA "Quyết toán →" ở đáy màn hiển thị ở cả 2 tab.~~ → **Chủ dự án đã chốt lại: CTA chỉ hiện ở tab "Đã chi"** (xem `docs/screens/03-event-detail.md` §7).
+
 ### Toast
 `left/right 20px; bottom 96px`, bg `#2E2A3B`, chữ trắng Nunito 700 13.5px, radius 16px, tự ẩn sau 2.2s. Dùng cho: đã tạo sự kiện, đã thêm/xóa khoản chi, đã sao chép link (`warikan.app/e/<shareId 10 ký tự>`), đã xóa sự kiện, "kết quả quyết toán được tính lại".
 
@@ -136,6 +151,7 @@ Mục đích: đặt tên, ngày, thêm người tham gia.
 - Event → "Quyết toán →" (disabled khi 0 khoản chi) → settle; back về event/home **luôn clear `sheet`** (không để sheet rò rỉ qua màn khác).
 - Tap avatar khi tạo sự kiện → đổi sang nhân vật ngẫu nhiên **chưa dùng trong sự kiện đó**.
 - Click expense card → sheet ở chế độ sửa (prefill) + nút Xóa.
+- Tab "Cần chi": ＋ hoặc Enter để thêm món (bỏ qua chuỗi rỗng, không validate gì thêm); tick = toggle `bought`; ✕ = xóa khỏi checklist. Không có toast cho các hành động này.
 - **Mọi thay đổi khoản chi hoặc danh sách người đều reset `done = {}` và `settledAt = null`** (kết quả quyết toán tính lại từ đầu) và báo toast.
 - Tick "Done" là toggle; khi tick đủ 100% → set `settledAt`, bắn confetti một lần, hiện banner chúc mừng.
 - Hover: nút đen → `#453E58`; coral → `#F3552F`; teal → `#26A686`; card → border `#FFD9CE`; nút ✕ → màu danger; input focus → border coral.
@@ -146,6 +162,8 @@ Mục đích: đặt tên, ngày, thêm người tham gia.
 screen: 'home' | 'create' | 'event' | 'settle'
 activeId: string | null            // sự kiện đang mở
 editingEvent: boolean              // create screen ở chế độ sửa
+tab: 'todo' | 'paid'               // tab ở màn event detail, default 'todo'
+todoInput: string                  // input thêm món cần mua
 events: Event[]
 draft: Event | null                // bản nháp create/edit
 person: string                     // input tên đang gõ
@@ -161,6 +179,7 @@ Event = {
   name, date: 'YYYY-MM-DD',
   participants: [{ id, name, characterId }],
   expenses: [{ id, title, amount:int, payerId }],
+  todos: [{ id, title, bought: boolean }],   // tab "Cần chi" — không có amount/payer
   done: { [transferKey: `${fromId}:${toId}`]: boolean },
   settledAt: ISOString | null
 }
@@ -185,4 +204,4 @@ Không dùng icon library — các "icon" là ký tự text: `＋ ✕ → ← �
 - `prototype/Chara.dc.html` — component avatar nhân vật.
 - `prototype/support.js` — runtime để prototype chạy được offline (không port sang production).
 - `assets/` — 10 ảnh nhân vật.
-- Spec requirement gốc: `../warikan-app-prompt.md` (ở gốc thư mục `docs/`, gồm cả Phase 2 chưa làm). Bản sao trong `spec/` đã bị xóa vì lệch nội dung với bản gốc — chỉ dùng bản ở `docs/`.
+- Spec requirement gốc: `../warikan-app-prompt.md` (ở gốc thư mục `docs/`, gồm cả Phase 2 chưa làm). Bản sao trong `spec/` đã bị xóa vì lệch nội dung — chỉ dùng bản ở `docs/`. Bundle export lần sau có thể tạo lại nó, nhớ xóa tiếp.

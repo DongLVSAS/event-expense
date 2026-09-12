@@ -181,7 +181,36 @@ a{color:#FF6B4A}a:hover{color:#E0512F}
 </div>
 </div>
 
-<div style="position:sticky;top:-54px;z-index:20;margin:18px 0 0;padding:14px 20px;background:linear-gradient(120deg,#2E2A3B,#463E5C);color:#fff;border-radius:0">
+<div style="display:flex;gap:6px;margin:16px 20px 0;padding:4px;background:#F4EDE5;border-radius:16px">
+<button onClick="{{ showTodo }}" style="flex:1;min-height:44px;border:none;border-radius:13px;background:{{ todoTabBg }};color:{{ todoTabFg }};box-shadow:{{ todoTabShadow }};font:800 14px Nunito,sans-serif;cursor:pointer">Cần chi <span style="font:800 12px Nunito,sans-serif;opacity:.6">{{ todoCountText }}</span></button>
+<button onClick="{{ showPaid }}" style="flex:1;min-height:44px;border:none;border-radius:13px;background:{{ paidTabBg }};color:{{ paidTabFg }};box-shadow:{{ paidTabShadow }};font:800 14px Nunito,sans-serif;cursor:pointer">Đã chi <span style="font:800 12px Nunito,sans-serif;opacity:.6">{{ paidCountText }}</span></button>
+</div>
+
+<sc-if value="{{ tabTodo }}">
+<div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;gap:8px">
+<input value="{{ todoInput }}" onChange="{{ setTodoInput }}" onKeyDown="{{ todoKey }}" placeholder="VD: Than nướng, đá lạnh…" style="flex:1;min-height:50px;border:1.5px solid #F0E6DC;border-radius:16px;background:#fff;padding:0 14px;font:600 15px Nunito,sans-serif;outline:none" style-focus="border-color:#FF6B4A">
+<button onClick="{{ addTodo }}" style="width:50px;min-height:50px;flex:none;border:none;border-radius:16px;background:#2FBF9B;color:#fff;font:800 22px Nunito,sans-serif;cursor:pointer" style-hover="background:#26A686">＋</button>
+</div>
+<sc-for list="{{ todoList }}" as="t" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:10px;background:{{ t.bg }};border:1px solid {{ t.border }};border-radius:18px;padding:10px 12px;box-shadow:0 2px 0 {{ t.shadow }};animation:wk-rise .25s ease both">
+<button onClick="{{ t.toggle }}" style="flex:none;width:30px;height:30px;border:2px solid {{ t.boxBorder }};border-radius:10px;background:{{ t.boxBg }};color:#fff;font:800 15px/1 Nunito,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Đánh dấu đã mua">{{ t.check }}</button>
+<span style="flex:1;min-width:0;font:700 15.5px/1.35 Nunito,sans-serif;color:{{ t.fg }};text-decoration:{{ t.deco }}">{{ t.title }}</span>
+<sc-if value="{{ t.bought }}" hint-placeholder-val="{{ false }}">
+<span style="flex:none;padding:4px 9px;border-radius:999px;background:#DFF6EC;color:#17A673;font:800 10.5px/1.2 Nunito,sans-serif;white-space:nowrap">Đã mua</span>
+</sc-if>
+<button onClick="{{ t.remove }}" style="flex:none;width:34px;height:34px;border:none;border-radius:11px;background:none;color:#C9C1D4;font:800 13px Nunito,sans-serif;cursor:pointer" style-hover="color:#E84855;background:#FFF4F5">✕</button>
+</div>
+</sc-for>
+<sc-if value="{{ noTodos }}">
+<div style="text-align:center;padding:26px 16px;border:1.5px dashed #EFE0D3;border-radius:20px;font:600 13.5px/1.6 Nunito,sans-serif;color:#BCA898">Chưa có gì trong danh sách cần chi.<br>Ghi trước những món cần mua, tick khi đã mua xong.</div>
+</sc-if>
+<div style="font:400 12.5px/1.5 Nunito,sans-serif;color:#B0A8BC;padding:2px 4px 0">Danh sách này chỉ để nhắc nhau cần mua gì — số tiền ghi ở tab “Đã chi”.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabPaid }}">
+<div style="position:sticky;top:-54px;z-index:20;margin:16px 0 0;padding:14px 20px;background:linear-gradient(120deg,#2E2A3B,#463E5C);color:#fff;border-radius:0">
 <div style="display:flex;align-items:center;justify-content:space-between">
 <span style="flex:none;white-space:nowrap;font:700 11.5px Nunito,sans-serif;letter-spacing:.1em;text-transform:uppercase;opacity:.7">Tổng chi tiêu</span>
 <span style="font:800 30px/1 'Baloo 2',sans-serif;color:#FFD166">{{ evTotalText }}</span>
@@ -209,6 +238,7 @@ a{color:#FF6B4A}a:hover{color:#E0512F}
 </sc-if>
 <button onClick="{{ openSheet }}" style="min-height:50px;border:1.5px dashed #C7E8DC;border-radius:18px;background:#F1FBF7;color:#17A673;font:800 15px Nunito,sans-serif;cursor:pointer" style-hover="background:#E4F6EF">＋ Thêm khoản chi</button>
 </div>
+</sc-if>
 </div>
 <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px 26px;background:linear-gradient(to top,#FFFBF5 65%,rgba(255,251,245,0))">
 <button onClick="{{ goSettle }}" disabled="{{ settleDisabled }}" style="width:100%;min-height:54px;border:none;border-radius:18px;background:{{ settleBg }};color:#fff;font:800 17px Nunito,sans-serif;cursor:pointer;box-shadow:0 8px 18px -6px rgba(47,191,155,.6)">Quyết toán →</button>
@@ -367,21 +397,25 @@ function settle(ev) {
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    const mk = (name, date, people, ex) => {
+    const mk = (name, date, people, ex, td) => {
       const parts = people.map((nm, i) => ({ id: uid(), name: nm, characterId: CHARS[i].id }));
       return { id: uid(), shareId: uid() + uid(), name, date,
         participants: parts,
         expenses: ex.map(e => ({ id: uid(), title: e[0], amount: e[1], payerId: parts[e[2]].id })),
+        todos: (td || []).map(t => ({ id: uid(), title: t[0], bought: t[1] })),
         done: {}, settledAt: null };
     };
     this.state = {
       screen: 'home', activeId: null, editingEvent: false,
       events: [
         mk('Đi Hakone tháng 3', '2026-03-08', ['Linh', 'Minh', 'Trang'],
-          [['Vé tàu Romancecar', 5000, 0], ['Onsen', 3000, 1], ['Cơm trưa', 2000, 2]]),
+          [['Vé tàu Romancecar', 5000, 0], ['Onsen', 3000, 1], ['Cơm trưa', 2000, 2]],
+          [['Vé tàu Romancecar', true], ['Onsen', true], ['Cơm trưa', true], ['Quà về cho lớp', false]]),
         mk('Tiệc BBQ bờ sông', '2026-02-14', ['Linh', 'Khoa', 'Mai', 'Nam'],
-          [['Đồ nướng', 9200, 0], ['Bia & nước', 4300, 1], ['Than + dụng cụ', 2500, 2]])
+          [['Đồ nướng', 9200, 0], ['Bia & nước', 4300, 1], ['Than + dụng cụ', 2500, 2]],
+          [['Đồ nướng', true], ['Bia & nước', true], ['Than + dụng cụ', true], ['Đá lạnh', false], ['Giấy ăn & bát đĩa', false]])
       ],
+      tab: 'todo', todoInput: '',
       draft: null, person: '', createError: '',
       sheet: null, sheetError: '', toast: '', confetti: false
     };
@@ -454,7 +488,7 @@ class Component extends DCLogic {
         this.setState({ screen: 'event', activeId: dr.id, draft: null, createError: '' });
         this.flash('Đã lưu. Kết quả quyết toán sẽ được tính lại.');
       } else {
-        const nev = { ...dr, expenses: [], done: {}, settledAt: null };
+        const nev = { ...dr, expenses: [], todos: [], done: {}, settledAt: null };
         this.setState(st => ({ events: [nev, ...st.events], screen: 'event', activeId: nev.id, draft: null, createError: '' }));
         this.flash('Đã tạo sự kiện — link chia sẻ đã sẵn sàng!');
       }
@@ -469,6 +503,29 @@ class Component extends DCLogic {
         src: c.src, bg: c.bg, name: p.name,
         edit: () => this.setState({ sheet: { id: x.id, title: x.title, amount: String(x.amount), payerId: x.payerId }, sheetError: '' }) };
     }) : [];
+
+    // ---- todo (cần chi) ----
+    const evTodos = ev ? (ev.todos || []) : [];
+    const evTodosBought = evTodos.filter(t => t.bought).length;
+    const todoList = evTodos.map(t => ({
+      title: t.title, bought: t.bought,
+      bg: t.bought ? '#E8F8EF' : '#fff',
+      border: t.bought ? '#BDE6CE' : '#F1E7DD',
+      shadow: t.bought ? '#D6EFE0' : '#F3EAE1',
+      fg: t.bought ? '#17805C' : '#2E2A3B',
+      deco: t.bought ? 'line-through' : 'none',
+      boxBg: t.bought ? '#17A673' : '#fff',
+      boxBorder: t.bought ? '#17A673' : '#E3D9CE',
+      check: t.bought ? '✓' : '',
+      toggle: () => this.patchEvent(ev.id, e => ({ ...e, todos: e.todos.map(x => x.id === t.id ? { ...x, bought: !x.bought } : x) })),
+      remove: () => this.patchEvent(ev.id, e => ({ ...e, todos: e.todos.filter(x => x.id !== t.id) }))
+    }));
+    const addTodo = () => {
+      const title = (s.todoInput || '').trim();
+      if (!title || !ev) return;
+      this.patchEvent(ev.id, e => ({ ...e, todos: [...(e.todos || []), { id: uid(), title, bought: false }] }));
+      this.setState({ todoInput: '' });
+    };
 
     // ---- settlement ----
     const res = ev ? settle(ev) : null;
@@ -560,6 +617,22 @@ class Component extends DCLogic {
       evTotalText: fmt(evTotal),
       evPeople: ev ? ev.participants.map(p => { const c = charOf(p.characterId); return { name: p.name, src: c.src, bg: c.bg }; }) : [],
       evExpenses, noExpenses: !!ev && ev.expenses.length === 0,
+      tabTodo: s.tab === 'todo', tabPaid: s.tab === 'paid',
+      showTodo: () => this.setState({ tab: 'todo' }),
+      showPaid: () => this.setState({ tab: 'paid' }),
+      todoTabBg: s.tab === 'todo' ? '#fff' : 'transparent',
+      todoTabFg: s.tab === 'todo' ? '#2E2A3B' : '#9A8E82',
+      todoTabShadow: s.tab === 'todo' ? '0 2px 6px -2px rgba(46,42,59,.22)' : 'none',
+      paidTabBg: s.tab === 'paid' ? '#fff' : 'transparent',
+      paidTabFg: s.tab === 'paid' ? '#2E2A3B' : '#9A8E82',
+      paidTabShadow: s.tab === 'paid' ? '0 2px 6px -2px rgba(46,42,59,.22)' : 'none',
+      todoCountText: evTodos.length ? evTodosBought + '/' + evTodos.length : '',
+      paidCountText: ev && ev.expenses.length ? String(ev.expenses.length) : '',
+      todoList, noTodos: !!ev && evTodos.length === 0,
+      todoInput: s.todoInput,
+      setTodoInput: e => this.setState({ todoInput: e.target.value }),
+      todoKey: e => { if (e.key === 'Enter') { e.preventDefault(); addTodo(); } },
+      addTodo,
       settleDisabled: !ev || ev.expenses.length === 0,
       settleBg: (!ev || ev.expenses.length === 0) ? '#CFC8D6' : '#2FBF9B',
       goSettle: () => { if (ev && ev.expenses.length) this.setState({ screen: 'settle', sheet: null, sheetError: '' }); },

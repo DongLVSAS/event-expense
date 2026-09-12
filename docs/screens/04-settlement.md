@@ -173,7 +173,11 @@ Khi mọi người đều có số dư `0` → Phần B rỗng. Khi đó:
 - Thay danh sách giao dịch bằng dòng: **"Mọi người đã chia đều rồi!"**
 - **Vẫn bắn pháo hoa.**
 
-**[ĐỀ XUẤT — CẦN XÁC NHẬN]** Prompt gốc không nói `settledAt` được ghi lúc nào trong trường hợp này (không có giao dịch nào để tick). Đề xuất: khi mở màn quyết toán mà không có giao dịch nào và `settledAt == null`, client gọi một lần để server ghi `settledAt`. Việc này cần bổ sung endpoint vào bảng API mục 6 của prompt gốc.
+**[ĐÃ CHỐT]** Có thêm endpoint **`POST /api/events/{shareId}/settle`**. Khi mở màn quyết toán mà không phát sinh giao dịch nào và `settledAt == null`, client gọi endpoint này **đúng một lần**.
+
+Server tự chạy lại `settle()` để xác minh thật sự không có giao dịch nào rồi mới ghi `settledAt` — không tin client. Nếu vẫn còn giao dịch chưa tick, endpoint trả **400** (`"Sự kiện này còn giao dịch cần chuyển tiền."`), để không ai đánh dấu xong hàng loạt được.
+
+Nhờ vậy trường hợp này vẫn có `settledAt`, nên pháo hoa chỉ bắn một lần và màn Home hiện đúng badge **Đã xong**.
 
 ---
 
@@ -222,5 +226,6 @@ Nguồn: `CLAUDE.md` + mục 5 của prompt gốc. Các bất biến này đư�
 |---|---|---|
 | GET | `/api/events/{shareId}` | Nạp event + participants + expenses + transferStatuses |
 | PUT | `/api/events/{shareId}/transfers/{transferKey}` | Bật/tắt Done một giao dịch, **gửi kèm `dataVersion`**; 409 khi lệch |
+| POST | `/api/events/{shareId}/settle` | Ghi `settledAt` cho trường hợp không phát sinh giao dịch nào — xem §5.3 |
 
-Màn này **không** có endpoint tính quyết toán — tính hoàn toàn bằng `lib/settlement.ts`, dùng chung cho server và client.
+Màn này **không** có endpoint tính quyết toán — tính hoàn toàn bằng `lib/settlement.ts`, dùng chung cho server và client. Hai endpoint trên cũng tính lại bằng chính hàm đó ở phía server để xác minh, không nhận kết quả từ client.
