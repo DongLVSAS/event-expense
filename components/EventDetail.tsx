@@ -432,10 +432,10 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
             className="absolute inset-0 bg-[rgba(46,42,59,.42)]"
           />
           <div className="animate-wk-pop relative w-full max-w-[340px] rounded-[22px] bg-surface p-5">
-            <h2 className="font-display text-[19px] leading-snug font-extrabold text-ink">
+            <h2 className="font-display text-[19px] leading-snug font-extrabold text-ink text-center">
               Xóa hẳn &quot;{event.name}&quot;?
             </h2>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+            <p className="mt-2 text-[13.5px] leading-relaxed text-muted text-center">
               Toàn bộ khoản chi và kết quả quyết toán sẽ bị xóa. Link chia sẻ sẽ không dùng được
               nữa với <strong className="font-extrabold text-ink">tất cả mọi người</strong>. Không
               thể hoàn tác.
@@ -472,10 +472,10 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
             className="absolute inset-0 bg-[rgba(46,42,59,.42)]"
           />
           <div className="animate-wk-pop relative w-full max-w-[340px] rounded-[22px] bg-surface p-5">
-            <h2 className="font-display text-[19px] font-extrabold text-ink">
+            <h2 className="font-display text-[19px] font-extrabold text-ink text-center">
               Kết quả quyết toán sẽ được tính lại
             </h2>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+            <p className="mt-2 text-[13.5px] leading-relaxed text-muted text-center">
               Toàn bộ đánh dấu &quot;Done&quot; hiện có sẽ bị xóa.
             </p>
             <div className="mt-4 flex gap-2">

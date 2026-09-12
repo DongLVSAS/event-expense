@@ -279,10 +279,10 @@ export default function HomePage() {
             className="absolute inset-0 bg-[rgba(46,42,59,.42)]"
           />
           <div className="animate-wk-pop relative w-full max-w-[340px] rounded-[22px] bg-surface p-5">
-            <h2 className="font-display text-[19px] leading-snug font-extrabold text-ink">
+            <h2 className="font-display text-[19px] leading-snug font-extrabold text-ink text-center">
               Xóa &quot;{confirmRemove.event.name}&quot; khỏi máy này?
             </h2>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+            <p className="mt-2 text-[13.5px] leading-relaxed text-muted text-center">
               Sự kiện vẫn còn trên máy chủ — ai có link chia sẻ vẫn mở và sửa được. Chỉ máy này
               không hiện nó nữa.
             </p>

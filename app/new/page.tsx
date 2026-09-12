@@ -180,10 +180,10 @@ export default function NewEventPage() {
     return (
       <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col px-5 pt-[54px] pb-8">
         <div className="animate-wk-pop rounded-[22px] border border-border-card bg-surface p-5 shadow-[0_3px_0_var(--color-shadow-flat)]">
-          <h1 className="font-display text-[26px] leading-tight font-extrabold text-ink">
+          <h1 className="font-display text-[26px] leading-tight font-extrabold text-ink text-center">
             Đã tạo sự kiện! 🎉
           </h1>
-          <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+          <p className="mt-2 text-[13.5px] leading-relaxed text-muted text-center">
             Gửi link này cho cả nhóm để mọi người cùng nhập chi tiêu.
           </p>
 
