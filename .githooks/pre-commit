@@ -1,0 +1,65 @@
+#!/bin/sh
+# Chặn commit khi DB production còn migration chưa được apply.
+#
+# Vì sao cần: `prisma migrate deploy` đã được tách khỏi `npm run build`
+# (xem CLAUDE.md mục "Migration production phải chạy tay"), nên không còn gì
+# tự động đưa schema lên production. Hook này là cái nhắc duy nhất.
+#
+# Nguyên tắc:
+#   - Chỉ kiểm khi commit có đụng tới prisma/ → commit khác không bị chậm.
+#   - CHẶN khi thật sự có migration chưa apply.
+#   - KHÔNG chặn khi chỉ là lỗi hạ tầng (mất mạng, thiếu .env) — không cản
+#     người đang làm việc vì lý do ngoài tầm kiểm soát của họ.
+#
+# Bỏ qua khi thật sự cần:  git commit --no-verify
+
+# Commit không đụng prisma/ thì thôi.
+if ! git diff --cached --name-only | grep -q '^prisma/'; then
+  exit 0
+fi
+
+# Máy mới clone hoặc CI chưa có credential → không chặn oan.
+if [ ! -f .env ]; then
+  exit 0
+fi
+
+echo "prisma: kiểm tra migration trên DB production..."
+OUTPUT=$(npx --no-install prisma migrate status 2>&1)
+STATUS=$?
+
+# Có migration chưa chạy → chặn.
+if printf '%s' "$OUTPUT" | grep -qi "not yet been applied"; then
+  echo ""
+  echo "  ✖ COMMIT BỊ CHẶN — DB production còn migration chưa chạy."
+  echo ""
+  printf '%s\n' "$OUTPUT" | grep -iA 20 "not yet been applied"
+  echo ""
+  echo "  Chạy trước khi commit:"
+  echo "      npm run db:deploy"
+  echo ""
+  echo "  Nếu cố ý bỏ qua:  git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+# Schema DB lệch so với lịch sử migration — cũng đáng dừng lại.
+if printf '%s' "$OUTPUT" | grep -qi "drift detected"; then
+  echo ""
+  echo "  ✖ COMMIT BỊ CHẶN — schema DB lệch so với lịch sử migration."
+  echo ""
+  printf '%s\n' "$OUTPUT" | tail -20
+  echo ""
+  echo "  Nếu cố ý bỏ qua:  git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+# Lỗi khác (mất mạng, DB ngủ, sai credential): cảnh báo nhưng cho commit.
+if [ $STATUS -ne 0 ]; then
+  echo "  ⚠ Không kiểm tra được migration (mất mạng hoặc DB không truy cập được)."
+  echo "    Vẫn cho commit. Nhớ chạy 'npm run db:status' trước khi deploy."
+  exit 0
+fi
+
+echo "prisma: DB đã khớp với migration."
+exit 0

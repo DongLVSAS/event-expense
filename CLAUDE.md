@@ -49,7 +49,31 @@ npm run test:watch       # vitest watch
 npx prisma migrate dev   # tạo + apply migration ở local
 npx prisma studio        # xem dữ liệu
 npx prisma generate      # sinh lại client sau khi sửa schema
+
+npm run db:status        # xem migration nào chưa chạy trên DB production
+npm run db:deploy        # CHẠY TAY: apply migration lên DB production
 ```
+
+### Migration production phải chạy tay
+
+`prisma migrate deploy` **cố ý không nằm trong `build`**. Neon chỉ có một DB, mà Vercel build lại cho **mọi** deployment kể cả preview của nhánh bất kỳ — để trong `build` thì một nhánh đang thử schema mới sẽ đổi DB thật lúc nào không hay.
+
+Quy trình khi có migration mới:
+
+1. `npx prisma migrate dev --name <tên>` ở local (tạo file migration)
+2. Commit file trong `prisma/migrations/`
+3. **Trước khi deploy**: `npm run db:deploy` để đưa schema lên production
+4. Rồi mới push/deploy code
+
+Làm ngược thứ tự (deploy code trước, migrate sau) sẽ khiến app chạy trên schema cũ và lỗi runtime. `npm run db:status` cho biết còn migration nào chưa chạy.
+
+**Có git hook chặn:** `.githooks/pre-commit` chặn `git commit` khi DB production còn migration chưa apply. Nó chỉ chạy khi commit có đụng tới `prisma/`, nên các commit khác không bị chậm. Mất mạng hay thiếu `.env` thì nó **cảnh báo rồi vẫn cho commit** — không cản người làm vì lý do hạ tầng. Bỏ qua có chủ đích: `git commit --no-verify`.
+
+Hook được cài tự động qua script `prepare` (chạy sau mỗi `npm install`), đặt `core.hooksPath = .githooks`. Trên Vercel không có `.git` nên lệnh đó lỗi và bị nuốt, không ảnh hưởng build.
+
+> Lưu ý về setup hiện tại: **local và production dùng chung một DB Neon**, nên `prisma migrate dev` ở máy đã apply thẳng lên production. Migration "chưa deploy" thực tế chỉ xảy ra khi pull migration của người khác về mà chưa chạy. Khi nào tách DB dev riêng thì hook này mới thành tuyến phòng thủ chính.
+
+`prisma generate` thì **vẫn nằm trong `build`** và cả `postinstall`: `generated/` bị gitignore nên Vercel phải tự sinh, nếu không sẽ lỗi `Can't resolve '@/generated/prisma/client'`.
 
 ## Cấu trúc thư mục
 

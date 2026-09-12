@@ -1,0 +1,7 @@
+# Git hook là script sh — bắt buộc giữ LF.
+# Nếu bị chuyển thành CRLF, shell trên Linux/macOS sẽ báo lỗi kiểu
+# "bad interpreter: /bin/sh^M" và hook không chạy được.
+.githooks/* text eol=lf
+
+# Migration SQL cũng nên ổn định giữa các máy.
+*.sql text eol=lf
