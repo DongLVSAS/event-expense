@@ -17,7 +17,7 @@ localStorage ──► [shareId, shareId, ...] ──► fetch tóm tắt từng
 - Màn này là **Client Component** (cần đọc localStorage). Prisma tuyệt đối không xuất hiện ở đây.
 - Nếu một `shareId` trả về 404 (sự kiện đã bị người khác xóa hẳn) → đánh dấu item đó là "đã bị xóa", cho phép gỡ khỏi máy (xem mục 6).
 
-**[ĐỀ XUẤT — CẦN XÁC NHẬN]** Nên có endpoint gộp `GET /api/events?ids=a,b,c` để lấy tóm tắt nhiều sự kiện trong một request, thay vì N request song song. Prompt gốc chưa liệt kê endpoint này.
+**[ĐÃ CHỐT]** Không thêm endpoint gộp. Home gọi `GET /api/events/{shareId}` song song cho từng id — một máy thường chỉ có vài sự kiện nên chi phí không đáng kể, và đỡ phải viết thêm một endpoint có nguy cơ bị lạm dụng.
 
 ---
 

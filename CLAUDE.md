@@ -115,7 +115,9 @@ Mỗi khi participants hoặc expenses thay đổi (thêm/sửa/xóa):
 2. Xóa toàn bộ `TransferStatus` của event đó
 3. Set `event.settledAt = null`
 
-Ba việc này phải nằm trong **cùng một transaction** với thao tác sửa dữ liệu. Không được để sót.
+Ba việc này phải nằm trong **cùng một transaction** với thao tác sửa dữ liệu. Không được để sót. Dùng helper `mutateEventData()` ở `lib/event-mutations.ts`, đừng gọi Prisma trực tiếp.
+
+**Ngoại lệ duy nhất — `Todo` (tab "Cần chi"):** món cần mua không có số tiền, không có người chi, **không vào phép tính quyết toán**. Ba endpoint `todos` **không được** gọi `mutateEventData()` — gọi nhầm sẽ xóa oan đánh dấu Done của cả nhóm. Tick "đã mua" cũng **không** tự sinh khoản chi. Xem `docs/screens/00-index.md` §3.10.
 
 ### Ranh giới server / client
 

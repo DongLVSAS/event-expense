@@ -22,7 +22,25 @@ model Event {
 
   participants     Participant[]
   expenses         Expense[]
+  todos            Todo[]
   transferStatuses TransferStatus[]
+}
+
+// Tab "Cần chi" — danh sách món cần mua.
+// KHÔNG có amount, KHÔNG có payer, KHÔNG vào phép tính quyết toán.
+// Sửa Todo tuyệt đối không được đi qua mutateEventData().
+// Xem docs/screens/03-event-detail.md §1.1 và CLAUDE.md mục dataVersion.
+model Todo {
+  id        String   @id @default(uuid())
+  eventId   String
+  title     String
+  bought    Boolean  @default(false)
+  sortOrder Int
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 model Participant {

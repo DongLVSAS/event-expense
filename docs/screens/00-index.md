@@ -13,7 +13,7 @@ Công thức tính toán **không lặp lại ở đây** — xem mục 5 của 
 |---|---|---|---|
 | `/` | Home — danh sách sự kiện | [01-home.md](01-home.md) | Client (đọc localStorage) |
 | `/new` | Tạo sự kiện | [02-event-form.md](02-event-form.md) | Client form → POST |
-| `/e/{shareId}` | Chi tiết sự kiện — danh sách chi tiêu | [03-event-detail.md](03-event-detail.md) | Server Component + client island |
+| `/e/{shareId}` | Chi tiết sự kiện — 2 tab: **Cần chi** / **Đã chi** | [03-event-detail.md](03-event-detail.md) | Server Component + client island |
 | `/e/{shareId}/edit` | Sửa sự kiện (tên, ngày, người tham gia) | [02-event-form.md](02-event-form.md) | Client form → PATCH |
 | `/e/{shareId}/settlement` | Quyết toán | [04-settlement.md](04-settlement.md) | Server Component + client island |
 | `*` (shareId sai/đã xóa) | 404 thân thiện | [05-not-found.md](05-not-found.md) | Server |
@@ -35,7 +35,8 @@ Công thức tính toán **không lặp lại ở đây** — xem mục 5 của 
   ├── "🔗" ──► sao chép link (không điều hướng)
   ├── "⋯" ──┬── "Sửa sự kiện" ──► /e/{shareId}/edit ──lưu──► /e/{shareId}
   │         └── "Xóa hẳn" ──► xác nhận ──► / (kèm toast)
-  ├── tap card chi tiêu ──► bottom sheet sửa/xóa (không điều hướng)
+  ├── tab "Cần chi" ──► thêm/tick/xóa món (không điều hướng, không đụng quyết toán)
+  ├── tab "Đã chi" ──► tap card chi tiêu ──► bottom sheet sửa/xóa
   └── "Quyết toán →" ───────────► /e/{shareId}/settlement
 
 /e/{shareId}/settlement
@@ -128,6 +129,22 @@ Ngoại lệ nghiệp vụ: toast **xung đột dữ liệu** (*"Dữ liệu v�
 **[ĐÃ CHỐT]** **nanoid 16–21 ký tự**, sinh ở server. Đây là ranh giới bảo mật duy nhất của app — ai có link là có toàn quyền sửa — nên không rút ngắn.
 
 Handoff minh họa toast sao chép link dưới dạng `warikan.app/e/<shareId 10 ký tự>`; con số 10 đó chỉ là minh họa trong prototype, **không áp dụng**. Độ dài `shareId` là câu hỏi bảo mật, không phải câu hỏi giao diện.
+
+---
+
+### 3.10. Todo và Expense là hai thứ khác nhau
+
+Sự kiện có **hai danh sách độc lập**, hiện ở hai tab của màn 03:
+
+| | **Todo** — "Cần chi" | **Expense** — "Đã chi" |
+|---|---|---|
+| Có số tiền / người chi | Không | Có, cả hai đều bắt buộc |
+| Vào phép tính quyết toán | **Không bao giờ** | Có |
+| Đổi `dataVersion`, xóa `TransferStatus` | **Không** | Có, mọi thao tác |
+
+Tick "đã mua" ở tab Cần chi **không** tự sinh khoản chi. Muốn ghi tiền thì tự thêm ở tab Đã chi. Đây là lựa chọn có chủ đích, không phải thiếu sót.
+
+Hệ quả cho code: ba endpoint `todos` **không** được gọi `mutateEventData()` — helper đó tồn tại để reset quyết toán, dùng nhầm sẽ xóa oan đánh dấu Done của cả nhóm.
 
 ---
 

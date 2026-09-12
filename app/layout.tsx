@@ -6,14 +6,17 @@ import './globals.css'
 // Bắt buộc có subset 'vietnamese' — toàn bộ text UI là tiếng Việt.
 // Dùng bản variable để chỉ tải một file mà vẫn đủ mọi weight.
 
+// Tên biến ở đây phải KHÁC tên token trong @theme của globals.css.
+// Đặt trùng tên sẽ tạo vòng tự tham chiếu (--font-display: var(--font-display))
+// và làm hỏng cả khối @theme, khiến Tailwind không sinh ra utility nào.
 const baloo = Baloo_2({
-  variable: '--font-display',
+  variable: '--font-baloo',
   subsets: ['latin', 'vietnamese'],
   display: 'swap',
 })
 
 const nunito = Nunito({
-  variable: '--font-body',
+  variable: '--font-nunito',
   subsets: ['latin', 'vietnamese'],
   display: 'swap',
 })
