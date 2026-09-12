@@ -67,7 +67,7 @@ Mở link `/e/{shareId}` lần đầu trên một máy → **tự động thêm 
 ### 3.2. Ngôn ngữ
 
 - Toàn bộ text hiển thị bằng **tiếng Việt**.
-- Ngoại lệ duy nhất, giữ nguyên từng ký tự: `Chúc mừng bạn đã có chuyến đi vui vẻ! またね!`
+- Ngoại lệ duy nhất, giữ nguyên từng ký tự: `Chúc mừng bạn đã có chuyến đi vui vẻ! またね!` — hiển thị trên **hai dòng**, `またね!` ở dòng dưới (xem [04-settlement.md](04-settlement.md) §5.1).
 - Tên biến / hàm / route / key trong code: tiếng Anh.
 
 ### 3.3. Mobile-first

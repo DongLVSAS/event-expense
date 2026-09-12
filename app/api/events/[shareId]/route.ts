@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { writeEventNoReset } from '@/lib/event-mutations'
 import { getEventByShareId } from '@/lib/get-event'
 import { prisma } from '@/lib/prisma'
 
@@ -60,30 +61,33 @@ export async function PATCH(request: Request, ctx: RouteContext<'/api/events/[sh
     return Response.json({ error: 'Ngày không hợp lệ.' }, { status: 400 })
   }
 
-  const existing = await prisma.event.findUnique({ where: { shareId }, select: { id: true } })
-  if (!existing) {
+  // Một lượt đi-về DB: ghi rồi đọc lại trong cùng transaction, client không
+  // phải GET lại. Tên/ngày không đụng phép chia tiền nên KHÔNG dùng
+  // mutateEventData — xem chú thích trên đầu UpdateEventInput.
+  const updated = await writeEventNoReset(shareId, [
+    prisma.event.update({
+      where: { shareId },
+      data: { name: parsed.data.name, date: parsedDate },
+    }),
+  ]).catch(() => null)
+  if (!updated) {
     return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
   }
 
-  await prisma.event.update({
-    where: { id: existing.id },
-    data: { name: parsed.data.name, date: parsedDate },
-  })
-
-  return Response.json({ ok: true })
+  return Response.json(updated)
 }
 
 export async function DELETE(_request: Request, ctx: RouteContext<'/api/events/[shareId]'>) {
   const { shareId } = await ctx.params
 
-  const existing = await prisma.event.findUnique({ where: { shareId }, select: { id: true } })
-  if (!existing) {
+  // Participant / Expense / Todo / TransferStatus đều ON DELETE CASCADE nên dọn
+  // theo. deleteMany thay cho findUnique-rồi-delete: một lượt đi-về thay vì hai,
+  // và count === 0 đã đủ để biết là không tìm thấy.
+  const { count } = await prisma.event.deleteMany({ where: { shareId } })
+  if (count === 0) {
     // Người khác vừa xóa trước — trạng thái mong muốn đã đạt.
     return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
   }
-
-  // Participant / Expense / TransferStatus đều ON DELETE CASCADE nên dọn theo.
-  await prisma.event.delete({ where: { id: existing.id } })
 
   return new Response(null, { status: 204 })
 }

@@ -35,7 +35,7 @@ Quyết định đã chốt được ghi thẳng vào file spec kèm nhãn `[Đ�
 - Next.js (App Router) + TypeScript
 - Tailwind CSS
 - Prisma + PostgreSQL (Neon)
-- Deploy: Vercel, region `hnd1`
+- Deploy: Vercel, region **`sin1` (Singapore)** — khai trong `vercel.json`
 - Test: Vitest
 
 ## Lệnh thường dùng
@@ -155,6 +155,22 @@ Ba việc này phải nằm trong **cùng một transaction** với thao tác s�
 ### Neon + serverless
 
 Trên Vercel mỗi route handler là một serverless function, không có connection pool sống lâu. Dùng `@prisma/adapter-neon` (Neon serverless driver) hoặc connection string qua PgBouncer. **Không** tạo `new PrismaClient()` trong từng request — dùng singleton ở `lib/prisma.ts`.
+
+#### Region phải trùng region của Neon
+
+`vercel.json` ghim function ở **`sin1`** vì Neon nằm ở **`ap-southeast-1` (Singapore)**. JSON không cho viết comment nên lý do để ở đây.
+
+Đây không phải chi tiết nhỏ. Mỗi request đi vài lượt đi-về DB (xem mục dưới), nên độ trễ giữa function và DB bị **nhân lên** chứ không cộng vào. Để mặc định — function ở `iad1` (Washington DC) — mỗi lượt tốn ~220 ms, thêm một khoản chi tốn ~1,5 s chỉ riêng phần DB. Cùng region thì mỗi lượt còn vài ms.
+
+**Đổi region của Neon thì phải đổi `vercel.json` theo**, nếu không sẽ chậm trở lại mà không có lỗi nào báo.
+
+#### Đếm số lượt đi-về DB mỗi khi viết route
+
+Vì lý do trên, mỗi câu lệnh Prisma trong một route handler là một lượt mạng. Quy tắc:
+
+- Đừng `findFirst` chỉ để kiểm tra tồn tại rồi mới `update` — dùng `where` lồng quan hệ trong chính lệnh ghi, bắt `P2025` để trả 404.
+- **Dùng `$transaction([...])` dạng mảng**, không dùng `$transaction(async tx => ...)`. Dạng mảng gửi cả nhóm trong một lượt mà vẫn nguyên tử; dạng callback gửi từng câu lệnh riêng (BEGIN, từng lệnh, COMMIT — 5 lượt cho 3 lệnh).
+- Endpoint ghi **trả luôn `EventDTO` mới** để client không phải `GET` lại — xem `docs/screens/03-event-detail.md` §8.
 
 ### Prisma 7 — khác nhiều so với bản cũ, đọc trước khi viết
 

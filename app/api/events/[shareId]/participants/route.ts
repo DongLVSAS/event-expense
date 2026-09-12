@@ -69,17 +69,19 @@ export async function POST(
 
   const nextSortOrder = event.participants.reduce((max, p) => Math.max(max, p.sortOrder), -1) + 1
 
-  const participant = await mutateEventData(event.id, (tx) =>
-    tx.participant.create({
+  const updated = await mutateEventData(shareId, [
+    prisma.participant.create({
       data: {
         eventId: event.id,
         name: parsed.data.name,
         characterId: parsed.data.characterId,
         sortOrder: nextSortOrder,
       },
-      select: { id: true, name: true, characterId: true, sortOrder: true },
-    })
-  )
+    }),
+  ])
+  if (!updated) {
+    return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
+  }
 
-  return Response.json(participant, { status: 201 })
+  return Response.json(updated, { status: 201 })
 }

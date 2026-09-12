@@ -137,7 +137,7 @@ Test phải khẳng định **cả thứ tự lẫn số tiền**, vì thứ t�
 
 ### 4.3. Bật/tắt Done
 
-- Tap checkbox → optimistic update ngay → `PUT /api/events/{shareId}/transfers/{transferKey}` **kèm `dataVersion` hiện tại**.
+- Tap checkbox → optimistic update ngay → `PUT /api/events/{shareId}/transfers/{transferKey}` **kèm `dataVersion` hiện tại**. Nút **không** bị `disabled` trong lúc chờ, và **không** refetch sau khi thành công — dùng thẳng `EventDTO` trong response (§9).
 - Server trả **409** nếu `dataVersion` lệch → toast *"Dữ liệu vừa được người khác cập nhật"* + reload, **không** retry mù.
 - Request lỗi → rollback checkbox về trạng thái cũ + toast đỏ.
 - **Bỏ tick một dòng đã Done** → hợp lệ: server set lại `settledAt = null`, Phần A cập nhật theo; hiệu ứng pháo hoa không chạy lại cho tới lần hoàn tất kế tiếp.
@@ -151,9 +151,12 @@ Test phải khẳng định **cả thứ tự lẫn số tiền**, vì thứ t�
 Khi **tất cả** trạng thái trong bảng Phần A đều là Done (tương đương: mọi giao dịch ở Phần B đều Done):
 
 - Bắn **pháo hoa / confetti**.
-- Hiển thị dòng chữ **màu đỏ**, giữ nguyên từng ký tự:
+- Hiển thị dòng chữ **màu đỏ**, giữ nguyên từng ký tự, **`またね!` xuống dòng riêng**:
 
-  > **Chúc mừng bạn đã có chuyến đi vui vẻ! またね!**
+  > **Chúc mừng bạn đã có chuyến đi vui vẻ!**
+  > **またね!**
+
+  Ngắt dòng là **cứng** (`<br />`), không phụ thuộc bề rộng màn hình.
 
 ### 5.2. Chỉ chạy một lần
 
@@ -227,5 +230,7 @@ Nguồn: `CLAUDE.md` + mục 5 của prompt gốc. Các bất biến này đư�
 | GET | `/api/events/{shareId}` | Nạp event + participants + expenses + transferStatuses |
 | PUT | `/api/events/{shareId}/transfers/{transferKey}` | Bật/tắt Done một giao dịch, **gửi kèm `dataVersion`**; 409 khi lệch |
 | POST | `/api/events/{shareId}/settle` | Ghi `settledAt` cho trường hợp không phát sinh giao dịch nào — xem §5.3 |
+
+Hai endpoint ghi trả về **nguyên `EventDTO` mới nhất** khi thành công, client nạp thẳng vào cache SWR và **không gọi `GET` lại** — xem [03-event-detail.md](03-event-detail.md) §11.1. Response 409 vẫn giữ hình dạng `{ error, dataVersion }`.
 
 Màn này **không** có endpoint tính quyết toán — tính hoàn toàn bằng `lib/settlement.ts`, dùng chung cho server và client. Hai endpoint trên cũng tính lại bằng chính hàm đó ở phía server để xác minh, không nhận kết quả từ client.

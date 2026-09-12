@@ -129,7 +129,7 @@ Segmented control: track bg `#F4EDE5`, radius 16px, padding 4px, gap 6px, margin
 - "← `<tên sự kiện>`"; H2 "Quyết toán"; nút "🔗 Link"; dòng meta: `Tổng ¥X · N người · mỗi người gánh ¥Y`.
 - **Bảng balance** (card radius 22px, overflow hidden): header bg `#FFF3E7`; grid `26px 1fr 92px 50px`, hàng padding `10px 14px`, hairline `#F7F0E9`. Cột: #, avatar 30px + tên, số dư (`+1,666` teal / `−333` đỏ / `0` xám, Baloo 2 800 16px), trạng thái "Done" teal khi mọi giao dịch của người đó đã tick. Sắp xếp: người nhận tiền trước, rồi theo |số dư| giảm dần.
 - **Gợi ý chuyển tiền**: mỗi hàng: avatar người trả → avatar người nhận → tên → số tiền → nút "Done" 56×34. Khi tick: bg đổi `#F1FBF7`, border `#C7E8DC`, nút thành teal đầy "✓ Done". Hint: "Tối đa N−1 lần chuyển khoản. Tick Done sau khi đã chuyển."
-- Khi mọi giao dịch Done: banner gradient `#FFF1D6→#FFE3EC` + mascot bob + "Chúc mừng bạn đã có chuyến đi vui vẻ! またね!" và **confetti 60 hạt phủ toàn màn 4.2s** (chỉ bắn lần đầu hoàn tất).
+- Khi mọi giao dịch Done: banner gradient `#FFF1D6→#FFE3EC` + mascot bob + "Chúc mừng bạn đã có chuyến đi vui vẻ!" / "またね!" (**`またね!` nằm ở dòng riêng**, ngắt dòng cứng chứ không để tự wrap) và **confetti 60 hạt phủ toàn màn 4.2s** (chỉ bắn lần đầu hoàn tất).
 - Nếu không ai phải chuyển: khung teal "Mọi người đã chia đều rồi! 🎉".
 
 ### 5. Bottom sheet — Thêm / Sửa khoản chi

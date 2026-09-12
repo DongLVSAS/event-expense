@@ -96,7 +96,7 @@ export default function HomePage() {
               Chào bạn 👋
             </p>
             <h1 className="mt-0.5 font-display text-[28px] leading-[1.1] font-extrabold text-ink">
-              Sự kiện của tôi
+              Đi chơi cùng XV
             </h1>
           </div>
           <span className="animate-wk-bob mt-1 shrink-0">

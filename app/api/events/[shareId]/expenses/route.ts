@@ -57,8 +57,8 @@ export async function POST(request: Request, ctx: RouteContext<'/api/events/[sha
 
   const nextSortOrder = (event.expenses[0]?.sortOrder ?? -1) + 1
 
-  const expense = await mutateEventData(event.id, (tx) =>
-    tx.expense.create({
+  const updated = await mutateEventData(shareId, [
+    prisma.expense.create({
       data: {
         eventId: event.id,
         title: parsed.data.title,
@@ -66,9 +66,11 @@ export async function POST(request: Request, ctx: RouteContext<'/api/events/[sha
         payerId: parsed.data.payerId,
         sortOrder: nextSortOrder,
       },
-      select: { id: true, title: true, amount: true, payerId: true, sortOrder: true },
-    })
-  )
+    }),
+  ])
+  if (!updated) {
+    return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
+  }
 
-  return Response.json(expense, { status: 201 })
+  return Response.json(updated, { status: 201 })
 }

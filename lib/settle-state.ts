@@ -1,4 +1,5 @@
 import type { Prisma } from '@/generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 import { settle, type Transfer } from '@/lib/settlement'
 
 // Trạng thái "đã quyết toán xong" do SERVER quyết, không phải client.
@@ -19,30 +20,37 @@ export function computeTransfers(event: EventForSettle): Transfer[] {
 }
 
 /**
- * Đồng bộ `settledAt` với thực tế: xong hết thì ghi mốc thời gian, còn sót
- * thì đưa về null. Trả về giá trị mới.
+ * Quyết `settledAt` mới dựa trên thực tế: xong hết thì ghi mốc thời gian, còn
+ * sót thì đưa về null. Trả về giá trị mới kèm lệnh ghi cần thực hiện (rỗng khi
+ * không có gì đổi).
+ *
+ * Trả về *lệnh chưa await* thay vì tự ghi, để caller nhét chung vào một
+ * `$transaction([...])` với các lệnh khác — cả nhóm đi trong một lượt mạng.
  *
  * Quy tắc "pháo hoa chỉ bắn một lần" dựa vào đúng chỗ này: client chỉ bắn khi
  * thấy settledAt chuyển từ null sang có giá trị.
  */
-export async function syncSettledAt(
-  tx: Prisma.TransactionClient,
+export function settledAtChange(
   event: EventForSettle,
   transfers: Transfer[],
   doneKeys: Set<string>
-): Promise<Date | null> {
+): { settledAt: Date | null; ops: Prisma.PrismaPromise<unknown>[] } {
   const allDone = transfers.every((t) => doneKeys.has(t.transferKey))
 
   if (allDone && event.settledAt === null) {
     const settledAt = new Date()
-    await tx.event.update({ where: { id: event.id }, data: { settledAt } })
-    return settledAt
+    return {
+      settledAt,
+      ops: [prisma.event.update({ where: { id: event.id }, data: { settledAt } })],
+    }
   }
 
   if (!allDone && event.settledAt !== null) {
-    await tx.event.update({ where: { id: event.id }, data: { settledAt: null } })
-    return null
+    return {
+      settledAt: null,
+      ops: [prisma.event.update({ where: { id: event.id }, data: { settledAt: null } })],
+    }
   }
 
-  return event.settledAt
+  return { settledAt: event.settledAt, ops: [] }
 }

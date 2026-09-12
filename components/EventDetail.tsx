@@ -104,9 +104,13 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
         const body = await res.json().catch(() => null)
         return body?.error ?? 'Không lưu được. Thử lại nhé.'
       }
+      // Sheet phải đóng SAU khi biết chắc đã lưu, nên chỗ này cố ý không
+      // optimistic — xem docs/screens/03-event-detail.md §12.
+      // Nhưng response đã chứa EventDTO mới nhất nên không GET lại (§11.1).
+      const updated: EventDTO = await res.json()
       setSheetOpen(false)
       showToast(editing ? 'Đã lưu khoản chi' : 'Đã thêm khoản chi')
-      await mutate()
+      await mutate(updated, { revalidate: false })
       return null
     } catch {
       return 'Không kết nối được máy chủ. Thử lại nhé.'
@@ -121,8 +125,15 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
         return body?.error ?? 'Không xóa được. Thử lại nhé.'
       }
       setSheetOpen(false)
-      showToast(res.status === 404 ? 'Khoản chi này vừa bị xóa' : 'Đã xóa khoản chi')
-      await mutate()
+      if (res.status === 404) {
+        // Người khác vừa xóa trước — không có EventDTO trong response, phải nạp lại.
+        showToast('Khoản chi này vừa bị xóa')
+        await mutate()
+      } else {
+        const updated: EventDTO = await res.json()
+        showToast('Đã xóa khoản chi')
+        await mutate(updated, { revalidate: false })
+      }
       return null
     } catch {
       return 'Không kết nối được máy chủ. Thử lại nhé.'
@@ -272,7 +283,7 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
         </div>
 
         {tab === 'todo' && (
-          <TodoList shareId={shareId} todos={event.todos} onChanged={() => mutate()} />
+          <TodoList shareId={shareId} event={event} write={mutate} />
         )}
 
         {tab === 'paid' && (

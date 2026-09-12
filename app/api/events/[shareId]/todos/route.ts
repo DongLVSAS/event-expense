@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { writeEventNoReset } from '@/lib/event-mutations'
 import { prisma } from '@/lib/prisma'
 
 // POST /api/events/{shareId}/todos — thêm một món cần mua.
@@ -7,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 // ⚠ TUYỆT ĐỐI KHÔNG dùng mutateEventData() ở file này.
 // Todo không có số tiền, không có người chi, không vào phép tính quyết toán.
 // Gọi nhầm helper đó sẽ tăng dataVersion và xóa sạch đánh dấu Done của cả nhóm.
+// Dùng writeEventNoReset() — ghi xong đọc lại sự kiện trong cùng transaction.
 
 export const TodoTitleInput = z.object({
   title: z
@@ -45,14 +47,18 @@ export async function POST(request: Request, ctx: RouteContext<'/api/events/[sha
     return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
   }
 
-  const todo = await prisma.todo.create({
-    data: {
-      eventId: event.id,
-      title: parsed.data.title,
-      sortOrder: (event.todos[0]?.sortOrder ?? -1) + 1,
-    },
-    select: { id: true, title: true, bought: true, sortOrder: true },
-  })
+  const updated = await writeEventNoReset(shareId, [
+    prisma.todo.create({
+      data: {
+        eventId: event.id,
+        title: parsed.data.title,
+        sortOrder: (event.todos[0]?.sortOrder ?? -1) + 1,
+      },
+    }),
+  ])
+  if (!updated) {
+    return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
+  }
 
-  return Response.json(todo, { status: 201 })
+  return Response.json(updated, { status: 201 })
 }

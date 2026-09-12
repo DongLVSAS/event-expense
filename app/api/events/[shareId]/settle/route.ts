@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { computeTransfers, syncSettledAt } from '@/lib/settle-state'
+import { eventQuery, toEventDTO } from '@/lib/get-event'
+import { computeTransfers, settledAtChange } from '@/lib/settle-state'
 
 // POST /api/events/{shareId}/settle
 //
@@ -40,9 +41,15 @@ export async function POST(_request: Request, ctx: RouteContext<'/api/events/[sh
     )
   }
 
-  const settledAt = await prisma.$transaction((tx) =>
-    syncSettledAt(tx, event, transfers, new Set())
-  )
+  const { ops } = settledAtChange(event, transfers, new Set())
 
-  return Response.json({ settledAt: settledAt?.toISOString() ?? null })
+  const results = await prisma.$transaction([...ops, eventQuery(shareId)])
+
+  // Phần tử cuối luôn là kết quả của eventQuery — $transaction giữ nguyên thứ tự.
+  const row = results.at(-1) as Awaited<ReturnType<typeof eventQuery>>
+  if (!row) {
+    return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
+  }
+
+  return Response.json(toEventDTO(row))
 }
