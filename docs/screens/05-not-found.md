@@ -32,6 +32,16 @@
 
 - Dùng `not-found.tsx` của App Router, trả **HTTP 404** thật (không phải trang 200 giả 404).
 - Metadata: **`noindex, nofollow`**.
+
+> **Đã kiểm chứng trên bản production — một hạn chế của Next 16 cần biết:**
+> khi `notFound()` được gọi từ trong `/e/[shareId]`, HTML server gửi đi có **body rỗng**; toàn bộ nội dung màn 404 nằm trong RSC payload và được React dựng ở client.
+>
+> - HTTP status **404 đúng**, `noindex` đúng, người dùng có JS thấy màn hình bình thường.
+> - Người tắt JS sẽ thấy **trang trắng**.
+>
+> Đã loại trừ `app/error.tsx` là nguyên nhân (bỏ ra vẫn vậy). `global-not-found.js` **không dùng được** cho ca này vì nó chỉ áp cho URL không khớp route nào, còn 404 của app đến từ `notFound()` trong một route đã khớp.
+>
+> Chấp nhận được vì app vốn là SPA-ish sau link chia sẻ và đã `noindex`. Nếu sau này cần hỗ trợ no-JS thì phải đổi cách: render UI 404 ngay trong `page.tsx` kèm `status` tự đặt, thay vì gọi `notFound()`.
 - **Dọn localStorage:** nếu `shareId` này đang nằm trong danh sách của máy, gỡ nó ra — hoặc đánh dấu "đã bị xóa" để Home hiển thị theo §6.3 của [01-home.md](01-home.md). Chọn một cách và làm nhất quán ở cả hai màn.
 
 ---
