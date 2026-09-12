@@ -75,16 +75,11 @@ localStorage ──► [shareId, shareId, ...] ──► fetch tóm tắt từng
 
 > Spec cũ có menu `...` với ba lựa chọn (sửa / xóa khỏi máy / xóa hẳn). Handoff thiết kế lại thành hai nút, nên menu đó **đã bỏ**.
 
-### 4.1. Hai năng lực chưa có chỗ đặt — **[CẦN THIẾT KẾ]**
+### 4.1. "Sửa sự kiện" và "Xóa hẳn" không nằm ở màn này
 
-Handoff không vẽ lối vào cho hai thứ sau, nhưng chúng vẫn là yêu cầu nghiệp vụ (prompt gốc mục 4.1 và API `DELETE /api/events/{shareId}`):
+**[ĐÃ CHỐT]** Hai năng lực đó đặt ở **header màn chi tiết sự kiện**, sau nút `⋯` — xem [03-event-detail.md](03-event-detail.md) §3.1. Màn Home giữ đúng hai nút như handoff thiết kế, **không thêm gì**.
 
-| Năng lực | Tình trạng |
-|---|---|
-| **Sửa sự kiện** (`/e/{shareId}/edit`) | Màn sửa đã có thiết kế (handoff mục 2, chế độ "Sửa sự kiện" + nút "Lưu thay đổi"), nhưng **không màn nào có nút dẫn tới nó**. |
-| **Xóa hẳn sự kiện** | Có API, có trong prompt gốc, nhưng handoff chỉ thiết kế "xóa khỏi máy này". |
-
-Cần chủ dự án quyết đặt hai lối vào này ở đâu (gợi ý: trong header màn chi tiết sự kiện) **trước khi code màn Home hoặc màn chi tiết**. Không tự thêm nút.
+Lý do: người mở qua link chia sẻ không bao giờ đi qua Home, nên đặt ở Home thì họ không tới được.
 
 ---
 

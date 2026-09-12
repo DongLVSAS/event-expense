@@ -1,0 +1,74 @@
+// Mô hình dữ liệu — nguồn: docs/warikan-app-prompt.md mục 3 + docs/screens/.
+// Kết quả quyết toán KHÔNG lưu ở đây; chỉ lưu trạng thái Done của từng giao dịch.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  shareId     String    @unique // nanoid 16–21 ký tự, dùng trong URL /e/{shareId}
+  name        String
+  date        DateTime  @db.Date // chỉ ngày, không giờ
+  dataVersion Int       @default(0) // tăng mỗi khi participants/expenses đổi
+  settledAt   DateTime? // null = chưa quyết toán xong
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  participants     Participant[]
+  expenses         Expense[]
+  transferStatuses TransferStatus[]
+}
+
+model Participant {
+  id          String @id @default(uuid())
+  eventId     String
+  name        String
+  characterId String // 1 trong 10 nhân vật, xem lib/characters.ts
+  sortOrder   Int // dùng làm tie-break tất định trong lib/settlement.ts
+
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  // Trùng tên và trùng nhân vật đều bị chặn trong cùng một sự kiện.
+  // So tên không phân biệt hoa/thường phải làm thêm ở tầng app — Postgres unique có phân biệt.
+  @@unique([eventId, name])
+  @@unique([eventId, characterId])
+  @@index([eventId])
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  eventId   String
+  title     String
+  amount    Int // JPY, số nguyên > 0. Không bao giờ dùng số thực.
+  payerId   String
+  sortOrder Int // STT hiển thị được sinh lại từ thứ tự này
+  createdAt DateTime @default(now())
+
+  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  // Restrict: chặn xóa người còn khoản chi ngay ở tầng DB.
+  // Thông báo cho người dùng: "Không thể xóa vì đã có khoản chi ghi nhận cho người này".
+  payer Participant @relation(fields: [payerId], references: [id], onDelete: Restrict)
+
+  @@index([eventId])
+  @@index([payerId])
+}
+
+model TransferStatus {
+  id          String  @id @default(uuid())
+  eventId     String
+  transferKey String // "{fromParticipantId}:{toParticipantId}"
+  dataVersion Int // version tại thời điểm đánh dấu Done
+  done        Boolean @default(false)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, transferKey])
+  @@index([eventId])
+}

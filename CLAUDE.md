@@ -65,8 +65,13 @@ components/
 lib/
   settlement.ts                     # LÕI NGHIỆP VỤ — xem mục dưới
   prisma.ts                         # singleton PrismaClient
-  local-events.ts                   # đọc/ghi danh sách shareId ở localStorage
+  characters.ts                     # 10 nhân vật + MAX_PARTICIPANTS (nguồn duy nhất)
+  local-events.ts                   # đọc/ghi danh sách shareId ở localStorage (chưa viết)
 prisma/schema.prisma
+prisma7.config.ts                   # URL cho Prisma CLI (Prisma 7 bắt buộc)
+public/characters/*.png             # copy từ docs/design_handoff/assets/
+generated/prisma/                   # Prisma Client sinh tự động — gitignore
+vitest.config.mts
 docs/spec.md
 __tests__/settlement.test.ts
 ```
@@ -122,11 +127,20 @@ Ba việc này phải nằm trong **cùng một transaction** với thao tác s�
 
 Trên Vercel mỗi route handler là một serverless function, không có connection pool sống lâu. Dùng `@prisma/adapter-neon` (Neon serverless driver) hoặc connection string qua PgBouncer. **Không** tạo `new PrismaClient()` trong từng request — dùng singleton ở `lib/prisma.ts`.
 
+### Prisma 7 — khác nhiều so với bản cũ, đọc trước khi viết
+
+- **Import Client từ `@/generated/prisma/client`**, KHÔNG phải `@prisma/client`. Generator là `prisma-client` (không phải `prisma-client-js`) và xuất ra `generated/prisma/`.
+- `datasource` trong `schema.prisma` **không có field `url`**. URL khai ở `prisma7.config.ts` (tên file đúng là `prisma7`, không phải `prisma.config.ts`).
+- Sau khi sửa `schema.prisma` phải chạy `npx prisma generate`, nếu không import sẽ lệch type.
+- Dùng `PrismaNeon` (WebSocket) chứ **không** dùng `PrismaNeonHttp` — bản HTTP không hỗ trợ interactive transaction, mà quy tắc `dataVersion` bắt buộc phải có.
+- `prisma` trên npm đang để dist-tag `latest` trỏ vào bản RC 8. **Ghim ở `^7.10.0`** cho khớp `@prisma/client`; đừng chạy `npm audit fix --force` vì nó đẩy lên RC.
+- **Hai connection string, đừng lẫn.** `.env` có `DATABASE_URL` (Neon **pooled**, app dùng lúc chạy) và `DIRECT_URL` (Neon **unpooled**, Prisma CLI dùng để migrate — PgBouncer làm hỏng advisory lock). Prisma 7 bỏ field `directUrl` nên `prisma7.config.ts` tự ưu tiên `DIRECT_URL`.
+
 ## Quy ước code
 
 - TypeScript strict. Không `any`, không `@ts-ignore`. Nếu type khó quá thì dừng lại hỏi tôi.
 - Server Component là mặc định. Chỉ thêm `'use client'` khi component thật sự cần state hoặc event handler.
-- Data fetching phía client dùng SWR hoặc TanStack Query — chọn một, không trộn lẫn.
+- Data fetching phía client: **SWR** (đã chốt). Không dùng TanStack Query, không trộn lẫn hai thứ.
 - Tên biến/hàm tiếng Anh. **Toàn bộ text hiển thị cho người dùng là tiếng Việt** (riêng dòng chúc mừng giữ nguyên `Chúc mừng bạn đã có chuyến đi vui vẻ! またね!`).
 - Tailwind: dùng class utility trực tiếp, không tạo file CSS riêng trừ khi bắt buộc.
 - Mobile-first: viết class cho mobile trước, breakpoint lớn hơn thêm sau. Vùng chạm tối thiểu 44×44px.
@@ -175,8 +189,15 @@ Sửa ánh xạ file → spec ở bảng `RULES` trong `spec-reminder.mjs` khi t
 
 ## Chưa quyết định (hỏi tôi khi chạm tới)
 
-- **SWR hay TanStack Query** — chọn một, không trộn lẫn. TODO
-- **Lối vào "Sửa sự kiện" và "Xóa hẳn sự kiện"** — handoff không vẽ nút nào dẫn tới hai màn/hành động này, nhưng chúng là yêu cầu nghiệp vụ. Xem `docs/screens/01-home.md` §4.1. TODO
-- **Độ dài `shareId`** — nghiệp vụ chốt nanoid 16–21; handoff minh họa 10 ký tự. Spec đang giữ 16–21 vì đây là câu hỏi bảo mật. Xem `docs/screens/00-index.md` §3.9. TODO
+**Hiện không còn mục lớn nào treo.** Mọi quyết định đã chốt nằm trong file spec tương ứng, gắn nhãn `[ĐÃ CHỐT]`.
 
-Đã được `docs/design_handoff/` chốt, **không còn treo**: danh sách nhân vật (10 con, ảnh ở `design_handoff/assets/`, trần 10 người/sự kiện) · design system (token đầy đủ trong README của handoff) · hiệu ứng pháo hoa (**không dùng thư viện** — CSS `@keyframes wk-fall`, 60 hạt).
+Đã chốt gần đây:
+
+| Mục | Kết quả |
+|---|---|
+| Thư viện fetch | **SWR** (`swr@^2.5.1`). Không dùng lẫn TanStack Query |
+| Độ dài `shareId` | **nanoid 16–21**, không rút ngắn — đây là ranh giới bảo mật duy nhất |
+| Lối vào Sửa / Xóa hẳn sự kiện | Nút `⋯` ở **header màn chi tiết**, không có ở Home |
+| Nhân vật · design system · pháo hoa | Theo `docs/design_handoff/` — 10 con, token đầy đủ, pháo hoa **không dùng thư viện** |
+
+Còn vài mục `[ĐỀ XUẤT]` nhỏ chưa duyệt trong `docs/screens/` (endpoint gộp cho Home, giới hạn 100 ký tự tên sự kiện, endpoint ghi `settledAt` khi không phát sinh giao dịch). Không chặn việc code, nhưng chạm tới thì hỏi.

@@ -52,7 +52,35 @@
 | Ngày | `DD/MM/YYYY` |
 | **Sao chép link chia sẻ** | Copy `https://{domain}/e/{shareId}` vào clipboard + toast *"Đã sao chép link"*. Vùng chạm ≥ 44×44px. |
 
-**[CẦN THIẾT KẾ]** Header này là chỗ hợp lý nhất để đặt lối vào **"Sửa sự kiện"** và **"Xóa hẳn sự kiện"** — hai năng lực nghiệp vụ mà handoff chưa vẽ lối vào (xem [01-home.md](01-home.md) §4.1). Người mở qua link chia sẻ không đi qua Home nên không có đường nào khác. **Chờ chủ dự án quyết, không tự thêm nút.**
+### 3.1. Nút `⋯` — Sửa / Xóa hẳn sự kiện
+
+**[ĐÃ CHỐT]** Hai năng lực này đặt ở **header màn chi tiết sự kiện**. Đây là chỗ duy nhất hợp lý: người mở qua link chia sẻ không đi qua Home, còn Home thì handoff đã chốt chỉ có 2 nút (xem [01-home.md](01-home.md) §4).
+
+```
+┌────────────────────────────────┐
+│ ←  Sự kiện của tôi             │
+│                                │
+│ Nhậu tất niên          [🔗] [⋯]│  ← ⋯ là nút mới, 44×44
+│ 28/12/2025 · 5 người           │
+└────────────────────────────────┘
+```
+
+Tap `⋯` → **bottom sheet** (dùng lại đúng pattern sheet ở §5.4: scrim, radius `28px 28px 0 0`, handle, `wk-rise`) với hai mục:
+
+| Mục | Việc xảy ra |
+|---|---|
+| **Sửa sự kiện** | Điều hướng `/e/{shareId}/edit` |
+| **Xóa hẳn sự kiện** (chữ màu danger) | Mở dialog xác nhận bên dưới |
+
+Xác nhận xóa hẳn:
+
+> **Xóa hẳn "{tên sự kiện}"?**
+> Toàn bộ khoản chi và kết quả quyết toán sẽ bị xóa. Link chia sẻ sẽ không dùng được nữa với **tất cả mọi người**. Không thể hoàn tác.
+> `[ Hủy ]` `[ Xóa hẳn ]`
+
+Xóa xong → `DELETE /api/events/{shareId}` → gỡ `shareId` khỏi localStorage → về Home kèm toast *"Đã xóa sự kiện"*.
+
+> **Phần tạo hình là đề xuất của tôi, không phải của handoff.** Handoff không vẽ hai nút này. Tôi chọn nút `⋯` + bottom sheet thay vì dropdown vì handoff đã dùng bottom sheet ở chỗ khác và vùng chạm 44px dễ đạt hơn. Muốn đổi (ví dụ hai nút riêng, hay đặt cuối màn) thì báo.
 
 ---
 
