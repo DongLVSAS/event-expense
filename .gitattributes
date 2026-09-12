@@ -5,3 +5,9 @@
 
 # Migration SQL cũng nên ổn định giữa các máy.
 *.sql text eol=lf
+
+# Prisma Client sinh tự động và được commit. Ép LF để diff không nhiễu
+# chỉ vì máy Windows đổi kiểu xuống dòng, và đánh dấu là file sinh ra
+# để GitHub thu gọn nó trong pull request.
+generated/** text eol=lf
+generated/** linguist-generated=true

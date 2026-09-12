@@ -67,7 +67,10 @@ Quy trình khi có migration mới:
 
 Làm ngược thứ tự (deploy code trước, migrate sau) sẽ khiến app chạy trên schema cũ và lỗi runtime. `npm run db:status` cho biết còn migration nào chưa chạy.
 
-**Có git hook chặn:** `.githooks/pre-commit` chặn `git commit` khi DB production còn migration chưa apply. Nó chỉ chạy khi commit có đụng tới `prisma/`, nên các commit khác không bị chậm. Mất mạng hay thiếu `.env` thì nó **cảnh báo rồi vẫn cho commit** — không cản người làm vì lý do hạ tầng. Bỏ qua có chủ đích: `git commit --no-verify`.
+**Có git hook chặn:** `.githooks/pre-commit` có hai chốt, đều chỉ chạy khi commit đụng tới `prisma/` nên các commit khác không bị chậm:
+
+1. Sửa `schema.prisma` mà **`generated/` chưa sinh lại** → chặn (hook tự chạy `prisma generate`, chỉ cần `git add generated/` rồi commit tiếp).
+2. DB production còn **migration chưa apply** → chặn. Mất mạng hay thiếu `.env` thì nó **cảnh báo rồi vẫn cho commit** — không cản người làm vì lý do hạ tầng. Bỏ qua có chủ đích: `git commit --no-verify`.
 
 Hook được cài tự động qua script `prepare` (chạy sau mỗi `npm install`), đặt `core.hooksPath = .githooks`. Trên Vercel không có `.git` nên lệnh đó lỗi và bị nuốt, không ảnh hưởng build.
 
@@ -156,6 +159,7 @@ Trên Vercel mỗi route handler là một serverless function, không có conne
 ### Prisma 7 — khác nhiều so với bản cũ, đọc trước khi viết
 
 - **Import Client từ `@/generated/prisma/client`**, KHÔNG phải `@prisma/client`. Generator là `prisma-client` (không phải `prisma-client-js`) và xuất ra `generated/prisma/`.
+- **`generated/` được COMMIT vào repo**, cố ý không gitignore. Vercel cần module này lúc build; để nó phụ thuộc việc `prisma generate` có chạy trên CI hay không từng làm deploy chết với lỗi `Can't resolve '@/generated/prisma/client'`. Đổi lại: **sửa `schema.prisma` xong phải `npx prisma generate` rồi `git add generated/`** — hook `pre-commit` chặn nếu quên.
 - `datasource` trong `schema.prisma` **không có field `url`**. URL khai ở `prisma7.config.ts` (tên file đúng là `prisma7`, không phải `prisma.config.ts`).
 - Sau khi sửa `schema.prisma` phải chạy `npx prisma generate`, nếu không import sẽ lệch type.
 - Dùng `PrismaNeon` (WebSocket) chứ **không** dùng `PrismaNeonHttp` — bản HTTP không hỗ trợ interactive transaction, mà quy tắc `dataVersion` bắt buộc phải có.

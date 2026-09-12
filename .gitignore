@@ -41,5 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma
-/generated/
+# prisma: generated/ CỐ Ý ĐƯỢC COMMIT, không ignore.
+# Vercel cần module @/generated/prisma/client lúc build. Nếu gitignore thì phải
+# trông chờ `prisma generate` chạy trên CI, mà điều đó phụ thuộc cấu hình Build
+# Command của Vercel — từng làm deploy chết với lỗi "Can't resolve".
+# Đổi lại: sửa schema.prisma xong PHẢI chạy `npx prisma generate` và commit kèm.
+# .githooks/pre-commit sẽ chặn nếu quên.

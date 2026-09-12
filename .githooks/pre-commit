@@ -1,24 +1,58 @@
 #!/bin/sh
-# Chặn commit khi DB production còn migration chưa được apply.
+# Hai chốt chặn trước khi commit, đều chỉ liên quan tới Prisma:
 #
-# Vì sao cần: `prisma migrate deploy` đã được tách khỏi `npm run build`
-# (xem CLAUDE.md mục "Migration production phải chạy tay"), nên không còn gì
-# tự động đưa schema lên production. Hook này là cái nhắc duy nhất.
+#   1. schema.prisma đổi mà generated/ chưa sinh lại
+#   2. DB production còn migration chưa apply
 #
-# Nguyên tắc:
-#   - Chỉ kiểm khi commit có đụng tới prisma/ → commit khác không bị chậm.
-#   - CHẶN khi thật sự có migration chưa apply.
-#   - KHÔNG chặn khi chỉ là lỗi hạ tầng (mất mạng, thiếu .env) — không cản
-#     người đang làm việc vì lý do ngoài tầm kiểm soát của họ.
-#
+# Cả hai chỉ chạy khi commit có đụng tới prisma/ → commit khác không bị chậm.
 # Bỏ qua khi thật sự cần:  git commit --no-verify
 
+STAGED=$(git diff --cached --name-only)
+
 # Commit không đụng prisma/ thì thôi.
-if ! git diff --cached --name-only | grep -q '^prisma/'; then
+if ! printf '%s' "$STAGED" | grep -q '^prisma/'; then
   exit 0
 fi
 
-# Máy mới clone hoặc CI chưa có credential → không chặn oan.
+# ---------------------------------------------------------------------------
+# Chốt 1 — generated/ phải khớp với schema.prisma
+#
+# generated/ được COMMIT vào repo (xem .gitignore), vì Vercel cần module
+# @/generated/prisma/client lúc build. Sửa schema mà quên sinh lại thì code
+# production sẽ chạy trên client cũ và lỗi type hoặc lỗi runtime.
+# ---------------------------------------------------------------------------
+if printf '%s' "$STAGED" | grep -q '^prisma/schema\.prisma$'; then
+  echo "prisma: schema đổi — kiểm tra generated/ có khớp không..."
+  npx --no-install prisma generate >/dev/null 2>&1
+
+  # So worktree với index: nếu generate vừa tạo ra thứ khác với cái đã stage
+  # thì tức là người dùng chưa sinh lại (hoặc chưa add).
+  DRIFT=$(git diff --name-only -- generated/; git ls-files --others --exclude-standard -- generated/)
+
+  if [ -n "$DRIFT" ]; then
+    echo ""
+    echo "  ✖ COMMIT BỊ CHẶN — generated/ chưa khớp với schema.prisma."
+    echo ""
+    printf '%s\n' "$DRIFT" | sed 's/^/      /'
+    echo ""
+    echo "  Prisma Client vừa được sinh lại. Chỉ cần add rồi commit tiếp:"
+    echo "      git add generated/"
+    echo ""
+    echo "  Nếu cố ý bỏ qua:  git commit --no-verify"
+    echo ""
+    exit 1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Chốt 2 — DB production không được còn migration chưa apply
+#
+# `prisma migrate deploy` đã tách khỏi `npm run build` (xem CLAUDE.md), nên
+# không còn gì tự động đưa schema lên production. Đây là cái nhắc duy nhất.
+#
+# Mất mạng hoặc thiếu .env thì CẢNH BÁO rồi vẫn cho commit — không cản người
+# đang làm việc vì lý do hạ tầng ngoài tầm kiểm soát của họ.
+# ---------------------------------------------------------------------------
 if [ ! -f .env ]; then
   exit 0
 fi
@@ -27,7 +61,6 @@ echo "prisma: kiểm tra migration trên DB production..."
 OUTPUT=$(npx --no-install prisma migrate status 2>&1)
 STATUS=$?
 
-# Có migration chưa chạy → chặn.
 if printf '%s' "$OUTPUT" | grep -qi "not yet been applied"; then
   echo ""
   echo "  ✖ COMMIT BỊ CHẶN — DB production còn migration chưa chạy."
@@ -42,7 +75,6 @@ if printf '%s' "$OUTPUT" | grep -qi "not yet been applied"; then
   exit 1
 fi
 
-# Schema DB lệch so với lịch sử migration — cũng đáng dừng lại.
 if printf '%s' "$OUTPUT" | grep -qi "drift detected"; then
   echo ""
   echo "  ✖ COMMIT BỊ CHẶN — schema DB lệch so với lịch sử migration."
@@ -54,7 +86,6 @@ if printf '%s' "$OUTPUT" | grep -qi "drift detected"; then
   exit 1
 fi
 
-# Lỗi khác (mất mạng, DB ngủ, sai credential): cảnh báo nhưng cho commit.
 if [ $STATUS -ne 0 ]; then
   echo "  ⚠ Không kiểm tra được migration (mất mạng hoặc DB không truy cập được)."
   echo "    Vẫn cho commit. Nhớ chạy 'npm run db:status' trước khi deploy."
