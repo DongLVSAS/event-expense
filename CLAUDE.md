@@ -227,7 +227,8 @@ Sửa ánh xạ file → spec ở bảng `RULES` trong `spec-reminder.mjs` khi t
 |---|---|
 | Thư viện fetch | **SWR** (`swr@^2.5.1`). Không dùng lẫn TanStack Query |
 | Độ dài `shareId` | **nanoid 16–21**, không rút ngắn — đây là ranh giới bảo mật duy nhất |
-| Lối vào Sửa / Xóa hẳn sự kiện | Nút `⋯` ở **header màn chi tiết**, không có ở Home |
+| Lối vào **Sửa** sự kiện | Nút `⋯` ở **header màn chi tiết**, không có ở Home |
+| Lối vào **Xóa hẳn** sự kiện | Hai nơi: nút `⋯` ở màn chi tiết, **và** nút `✕` trên thẻ ở Home. Cả hai gọi `DELETE /api/events/{shareId}` — xóa ở mọi nơi, người khác giữ link cũng mất. Nút `✕` ở Home **không còn** là "chỉ gỡ khỏi máy này" (đổi ngày 13/09/2026) — xem `docs/screens/01-home.md` §4.1 |
 | Nhân vật · design system · pháo hoa | Theo `docs/design_handoff/` — 10 con, token đầy đủ, pháo hoa **không dùng thư viện** |
 
 Còn vài mục `[ĐỀ XUẤT]` nhỏ chưa duyệt trong `docs/screens/` (endpoint gộp cho Home, giới hạn 100 ký tự tên sự kiện, endpoint ghi `settledAt` khi không phát sinh giao dịch). Không chặn việc code, nhưng chạm tới thì hỏi.

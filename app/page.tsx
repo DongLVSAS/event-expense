@@ -63,6 +63,8 @@ async function loadRows(ids: string[]): Promise<Row[]> {
 
 export default function HomePage() {
   const [confirmRemove, setConfirmRemove] = useState<Row | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   // localStorage là external store, đọc bằng useSyncExternalStore chứ không phải
   // useEffect + setState: không thừa một vòng render, và tự cập nhật khi tab khác
@@ -82,9 +84,44 @@ export default function HomePage() {
   // false còn client có thể ra true → hydration mismatch.
   const storageBlocked = rows !== undefined && !isLocalStorageAvailable()
 
+  /**
+   * Gỡ khỏi máy này thôi. Chỉ dùng cho thẻ đã 404 hoặc lỗi mạng (§6.3) —
+   * sự kiện không còn trên server nên chẳng có gì để DELETE.
+   */
   function removeFromDevice(shareId: string) {
     removeLocalEvent(shareId)
     setConfirmRemove(null)
+  }
+
+  /**
+   * Xóa hẳn: mọi người giữ link đều mất sự kiện. Không hoàn tác được.
+   * Spec: docs/screens/01-home.md §4.1
+   */
+  async function deleteEverywhere(shareId: string) {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const res = await fetch(`/api/events/${shareId}`, { method: 'DELETE' })
+      // 404 = người khác vừa xóa trước. Trạng thái mong muốn đã đạt, coi là xong.
+      if (!res.ok && res.status !== 404) {
+        const body: unknown = await res.json().catch(() => null)
+        setDeleteError((body as { error?: string } | null)?.error ?? 'Không xóa được. Thử lại nhé.')
+        return
+      }
+      // Chỉ gỡ khỏi localStorage SAU khi server đã xóa thật. Làm ngược lại thì
+      // một lần xóa hụt sẽ khiến người dùng mất luôn đường vào sự kiện còn sống.
+      removeLocalEvent(shareId)
+      setConfirmRemove(null)
+    } catch {
+      setDeleteError('Không kết nối được máy chủ. Thử lại nhé.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  function closeConfirm() {
+    setConfirmRemove(null)
+    setDeleteError('')
   }
 
   return (
@@ -245,8 +282,11 @@ export default function HomePage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => setConfirmRemove(row)}
-                      aria-label={`Xóa "${event.name}" khỏi máy này`}
+                      onClick={() => {
+                        setDeleteError('')
+                        setConfirmRemove(row)
+                      }}
+                      aria-label={`Xóa hẳn "${event.name}"`}
                       className="h-11 w-11 shrink-0 rounded-[14px] bg-[#FFF8F1] text-[15px] font-bold text-faint transition-colors hover:bg-danger-soft hover:text-danger"
                     >
                       ✕
@@ -269,37 +309,51 @@ export default function HomePage() {
         </Link>
       )}
 
-      {/* Xác nhận: nêu rõ đây KHÔNG phải xóa hẳn, người khác vẫn mở được link */}
+      {/* Xác nhận xóa hẳn. Phải nói thẳng là người khác cũng mất — spec §4.1. */}
       {confirmRemove?.state === 'ok' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <button
             type="button"
             aria-label="Hủy"
-            onClick={() => setConfirmRemove(null)}
+            onClick={closeConfirm}
+            disabled={deleting}
             className="absolute inset-0 bg-[rgba(46,42,59,.42)]"
           />
           <div className="animate-wk-pop relative w-full max-w-[340px] rounded-[22px] bg-surface p-5">
             <h2 className="font-display text-[19px] leading-snug font-extrabold text-ink text-center">
-              Xóa &quot;{confirmRemove.event.name}&quot; khỏi máy này?
+              Xóa hẳn &quot;{confirmRemove.event.name}&quot;?
             </h2>
             <p className="mt-2 text-[13.5px] leading-relaxed text-muted text-center">
-              Sự kiện vẫn còn trên máy chủ — ai có link chia sẻ vẫn mở và sửa được. Chỉ máy này
-              không hiện nó nữa.
+              Sự kiện sẽ bị xóa ở <strong className="font-extrabold text-danger-text">mọi nơi</strong> —
+              những người khác đang giữ link chia sẻ cũng sẽ không mở được nữa. Toàn bộ khoản chi
+              và kết quả quyết toán sẽ mất. Không khôi phục lại được.
             </p>
+
+            {deleteError && (
+              <p
+                role="alert"
+                className="mt-3 rounded-[14px] bg-danger-soft px-3 py-2.5 text-center text-[13px] font-semibold text-danger-text"
+              >
+                {deleteError}
+              </p>
+            )}
+
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
-                onClick={() => setConfirmRemove(null)}
-                className="h-11 flex-1 rounded-[14px] bg-cream-deep text-[14px] font-extrabold text-muted"
+                onClick={closeConfirm}
+                disabled={deleting}
+                className="h-11 flex-1 rounded-[14px] bg-cream-deep text-[14px] font-extrabold text-muted disabled:opacity-50"
               >
                 Hủy
               </button>
               <button
                 type="button"
-                onClick={() => removeFromDevice(confirmRemove.shareId)}
-                className="h-11 flex-1 rounded-[14px] bg-danger text-[14px] font-extrabold text-white transition-colors hover:bg-danger-strong"
+                onClick={() => void deleteEverywhere(confirmRemove.shareId)}
+                disabled={deleting}
+                className="h-11 flex-1 rounded-[14px] bg-danger text-[14px] font-extrabold text-white transition-colors hover:bg-danger-strong disabled:opacity-50"
               >
-                Xóa khỏi máy này
+                {deleting ? 'Đang xóa...' : 'Xóa hẳn'}
               </button>
             </div>
           </div>

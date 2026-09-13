@@ -71,15 +71,29 @@ localStorage ──► [shareId, shareId, ...] ──► fetch tóm tắt từng
 | Nút | Việc xảy ra | Xác nhận |
 |---|---|---|
 | **Mở sự kiện** (nút đen, `flex:1`) | Điều hướng tới `/e/{shareId}` | Không |
-| **✕** (44×44, hover màu danger) | **Xóa khỏi máy này** — chỉ gỡ `shareId` khỏi localStorage. Sự kiện **vẫn còn** trên server, ai có link vẫn mở được. Toast: *"Đã xóa khỏi máy này"* | Có — nêu rõ chỉ ẩn khỏi máy này |
+| **✕** (44×44, hover màu danger) | **Xóa hẳn sự kiện** — `DELETE /api/events/{shareId}`, rồi gỡ `shareId` khỏi localStorage. Xóa ở **mọi nơi**: người khác có link cũng mất sự kiện | Có — **bắt buộc**, và phải nói rõ người khác cũng mất |
 
 > Spec cũ có menu `...` với ba lựa chọn (sửa / xóa khỏi máy / xóa hẳn). Handoff thiết kế lại thành hai nút, nên menu đó **đã bỏ**.
 
-### 4.1. "Sửa sự kiện" và "Xóa hẳn" không nằm ở màn này
+### 4.1. Nút ✕ xóa hẳn, không phải chỉ gỡ khỏi máy [ĐÃ CHỐT — 13/09/2026]
 
-**[ĐÃ CHỐT]** Hai năng lực đó đặt ở **header màn chi tiết sự kiện**, sau nút `⋯` — xem [03-event-detail.md](03-event-detail.md) §3.1. Màn Home giữ đúng hai nút như handoff thiết kế, **không thêm gì**.
+**Quyết định này thay cho quyết định cũ.** Trước đây nút `✕` chỉ gỡ `shareId` khỏi localStorage, sự kiện vẫn còn trên server. Chủ dự án đã đổi: **xóa là xóa ở mọi nơi.**
 
-Lý do: người mở qua link chia sẻ không bao giờ đi qua Home, nên đặt ở Home thì họ không tới được.
+Vì hành động không hoàn tác được và ảnh hưởng tới người khác, popup xác nhận **phải nói thẳng điều đó**:
+
+> **Xóa hẳn "&lt;tên sự kiện&gt;"?**
+> Sự kiện sẽ bị xóa ở **mọi nơi** — những người khác đang giữ link chia sẻ cũng sẽ không mở được nữa. Toàn bộ khoản chi và kết quả quyết toán sẽ mất. Không khôi phục lại được.
+>
+> `[ Hủy ]` `[ Xóa hẳn ]`
+
+- Nút xác nhận mang màu danger, nhãn **"Xóa hẳn"** (không phải "Xóa khỏi máy này").
+- Trong lúc gọi API: nhãn đổi thành **"Đang xóa..."**, khóa cả hai nút để không bấm hai lần.
+- Request hỏng → **giữ popup mở**, hiện câu lỗi ngay trong popup, `shareId` **không** bị gỡ khỏi localStorage. Xóa hụt mà vẫn biến khỏi danh sách thì người dùng mất luôn đường vào sự kiện còn sống.
+- Thành công → đóng popup; thẻ tự biến mất vì danh sách dựng từ localStorage.
+
+**"Sửa sự kiện" vẫn không nằm ở màn này** — chỉ có ở header màn chi tiết, sau nút `⋯` ([03-event-detail.md](03-event-detail.md) §3.1). Lý do giữ nguyên: người mở qua link chia sẻ không bao giờ đi qua Home.
+
+Nút "Xóa hẳn sự kiện" trong menu `⋯` ở màn chi tiết **giữ nguyên**, không bỏ. Hai lối vào cùng gọi một endpoint.
 
 ---
 
@@ -118,6 +132,8 @@ Item hiện dạng mờ, text thay bằng:
 
 Tap "Gỡ khỏi danh sách" → xóa `shareId` khỏi localStorage.
 
+Đây là **lối duy nhất còn lại chỉ đụng tới máy này**, và nó đúng: sự kiện đã không còn trên server (hoặc chưa tải được), nên không có gì để gọi `DELETE` nữa. Không cần popup xác nhận — không mất gì của ai.
+
 ### 6.4. Lỗi mạng
 Giữ nguyên danh sách tên đã cache (nếu có), hiện toast lỗi + nút **Thử lại** theo mục 3.4 của [00-index.md](00-index.md).
 
@@ -140,6 +156,8 @@ Giữ nguyên danh sách tên đã cache (nếu có), hiện toast lỗi + nút 
 | Method | Endpoint | Dùng cho |
 |---|---|---|
 | GET | `/api/events/{shareId}` | Lấy tóm tắt từng sự kiện trong danh sách |
-| DELETE | `/api/events/{shareId}` | Hành động "Xóa hẳn sự kiện" |
+| DELETE | `/api/events/{shareId}` | Nút `✕` — xóa hẳn sự kiện (§4.1) |
 
-"Xóa khỏi máy này" **không gọi API** — thuần localStorage.
+Chỉ "Gỡ khỏi danh sách" ở §6.3 là **không gọi API** — thuần localStorage, vì sự kiện đã không còn trên server.
+
+`DELETE` trả `204` khi xóa xong và `404` khi sự kiện đã bị người khác xóa trước. Coi `404` là **thành công** — trạng thái mong muốn đã đạt, cứ gỡ khỏi localStorage.
