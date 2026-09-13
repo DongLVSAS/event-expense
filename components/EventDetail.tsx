@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 import { CharacterAvatar } from '@/components/CharacterAvatar'
 import { type ExpenseDraft, ExpenseSheet } from '@/components/ExpenseSheet'
+import { SwipeToDelete } from '@/components/SwipeToDelete'
 import { TodoList } from '@/components/TodoList'
 import type { EventDTO, EventExpenseDTO } from '@/lib/event-dto'
 import { addLocalEvent, removeLocalEvent } from '@/lib/local-events'
+import { optimisticWrite } from '@/lib/optimistic'
 import { formatYen } from '@/lib/settlement'
 
 // Màn 03 — danh sách chi tiêu (client island).
@@ -44,7 +46,14 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editing, setEditing] = useState<EventExpenseDTO | null>(null)
   const [toast, setToast] = useState('')
-  const [confirmReset, setConfirmReset] = useState<null | (() => void)>(null)
+  // Dialog "kết quả quyết toán sẽ được tính lại". Giữ cả nhãn nút xác nhận vì
+  // cùng một dialog phục vụ hai việc: sửa khoản chi, và vuốt xóa khoản chi.
+  const [confirmReset, setConfirmReset] = useState<null | { run: () => void; confirmLabel: string }>(
+    null
+  )
+  /** Khoản chi vừa vuốt xóa, giữ 5s để hoàn tác. Xem §6.3.1. */
+  const [undoDraft, setUndoDraft] = useState<ExpenseDraft | null>(null)
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -56,12 +65,19 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
     addLocalEvent(shareId)
   }, [shareId])
 
+  useEffect(() => {
+    return () => {
+      if (undoTimer.current) clearTimeout(undoTimer.current)
+    }
+  }, [])
+
   const showToast = useCallback((message: string) => {
     setToast(message)
     setTimeout(() => setToast(''), 2200)
   }, [])
 
   const total = event.expenses.reduce((sum, e) => sum + e.amount, 0)
+  const hasExpenses = event.expenses.length > 0
   const todoCount = event.todos.length
   const boughtCount = event.todos.filter((t) => t.bought).length
   const payerOf = (id: string) => event.participants.find((p) => p.id === id)
@@ -71,8 +87,8 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
    * Sửa chi tiêu sau khi đã quyết toán xong sẽ xóa sạch đánh dấu Done —
    * hỏi trước thay vì âm thầm làm mất công người dùng.
    */
-  function guardSettled(action: () => void) {
-    if (isSettled) setConfirmReset(() => action)
+  function guardSettled(action: () => void, confirmLabel = 'Vẫn sửa') {
+    if (isSettled) setConfirmReset({ run: action, confirmLabel })
     else action()
   }
 
@@ -137,6 +153,73 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
       return null
     } catch {
       return 'Không kết nối được máy chủ. Thử lại nhé.'
+    }
+  }
+
+  // ---- Vuốt để xóa (§6.3.1) ----------------------------------------------
+  //
+  // Khác nút Xóa trong sheet: không có bước xác nhận, bù lại bằng toast hoàn
+  // tác 5 giây. Thẻ đã trượt khỏi màn rồi nên xóa optimistic luôn, đợi server
+  // mới bỏ thẻ đi thì danh sách sẽ khựng lại một nhịp thấy rõ.
+  function clearUndo() {
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    undoTimer.current = null
+    setUndoDraft(null)
+  }
+
+  async function swipeDelete(expense: EventExpenseDTO) {
+    // Chỉ có MỘT đường hoàn tác tại một thời điểm — khoản mới vuốt thay chỗ
+    // khoản cũ, không xếp hàng nhiều toast.
+    clearUndo()
+
+    const optimistic: EventDTO = {
+      ...event,
+      expenses: event.expenses.filter((e) => e.id !== expense.id),
+    }
+
+    const written = await optimisticWrite(mutate, optimistic, () =>
+      fetch(`/api/events/${shareId}/expenses/${expense.id}`, { method: 'DELETE' })
+    )
+
+    if (!written.ok) {
+      if (written.status === 404) {
+        // Người khác vừa xóa trước. Trạng thái mong muốn đã đạt — nạp lại cho
+        // khớp, và không mời hoàn tác thứ không phải mình xóa.
+        showToast('Khoản chi này vừa bị xóa')
+        await mutate()
+        return
+      }
+      showToast(written.message)
+      return
+    }
+
+    setUndoDraft({ title: expense.title, amount: expense.amount, payerId: expense.payerId })
+    undoTimer.current = setTimeout(() => setUndoDraft(null), 5000)
+  }
+
+  /**
+   * Hoàn tác = TẠO LẠI khoản chi, không phải khôi phục bản ghi cũ.
+   * id mới, xuống cuối danh sách, dataVersion tăng thêm lần nữa, và đánh dấu
+   * Done của cả nhóm thì không lấy lại được. Xem §6.3.1.
+   */
+  async function undoDelete(draft: ExpenseDraft) {
+    clearUndo()
+    try {
+      const res = await fetch(`/api/events/${shareId}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        showToast(body?.error ?? 'Không hoàn tác được.')
+        return
+      }
+      const updated: EventDTO = await res.json()
+      await mutate(updated, { revalidate: false })
+      showToast('Đã hoàn tác')
+    } catch {
+      showToast('Không kết nối được máy chủ.')
     }
   }
 
@@ -226,9 +309,10 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
               <button
                 type="button"
                 onClick={copyLink}
+                aria-label="Sao chép link chia sẻ"
                 className="h-11 rounded-full bg-primary-soft px-3.5 text-[12.5px] font-extrabold whitespace-nowrap text-primary-text transition-colors hover:bg-primary-badge"
               >
-                🔗 Sao chép link
+                🔗 Link
               </button>
               <button
                 type="button"
@@ -311,6 +395,13 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
                 const payer = payerOf(expense.payerId)
                 return (
                   <li key={expense.id} id={`expense-${expense.id}`}>
+                    {/* Vuốt ngang để xóa — §6.3.1. Sự kiện đã quyết toán thì
+                        thẻ bật về chỗ cũ và hỏi trước, y như khi tap để sửa. */}
+                    <SwipeToDelete
+                      onDelete={() =>
+                        guardSettled(() => void swipeDelete(expense), 'Vẫn xóa')
+                      }
+                    >
                     <button
                       type="button"
                       onClick={() => openEdit(expense)}
@@ -339,19 +430,25 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
                         </span>
                       </div>
                     </button>
+                    </SwipeToDelete>
                   </li>
                 )
               })}
             </ul>
           )}
 
-          <button
-            type="button"
-            onClick={openAdd}
-            className="mt-3 h-[50px] w-full rounded-[16px] border-2 border-dashed border-success-border bg-success-soft text-[15px] font-extrabold text-success-text transition-colors hover:bg-success-badge"
-          >
-            ＋ Thêm khoản chi
-          </button>
+          {/* Chưa có khoản chi nào → nút thêm nằm ngay dưới khung rỗng.
+              Có rồi → nó chuyển xuống hàng CTA đáy màn, xem §6.5.
+              Cố ý chỉ có ĐÚNG MỘT lối thêm tại mỗi thời điểm. */}
+          {!hasExpenses && (
+            <button
+              type="button"
+              onClick={openAdd}
+              className="mt-3 h-[50px] w-full rounded-[16px] border-2 border-dashed border-success-border bg-success-soft text-[15px] font-extrabold text-success-text transition-colors hover:bg-success-badge"
+            >
+              ＋ Thêm khoản chi
+            </button>
+          )}
         </div>
           </>
         )}
@@ -363,19 +460,34 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
       {tab === 'paid' && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-cream via-cream/95 to-transparent pt-8 pb-[max(20px,env(safe-area-inset-bottom))]">
           <div className="pointer-events-auto mx-auto w-full max-w-[430px] px-5">
-            {event.expenses.length === 0 && (
+            {!hasExpenses && (
               <p className="mb-1.5 text-center text-[12px] text-faint">
                 Thêm ít nhất một khoản chi để quyết toán.
               </p>
             )}
-            <button
-              type="button"
-              onClick={goToSettlement}
-              disabled={event.expenses.length === 0}
-              className="h-[54px] w-full rounded-[18px] bg-success text-[17px] font-extrabold text-white shadow-[0_8px_18px_-6px_rgba(47,191,155,.6)] transition-colors hover:bg-success-hover disabled:bg-disabled disabled:shadow-none"
-            >
-              {isSettled ? 'Xem quyết toán →' : 'Quyết toán →'}
-            </button>
+            {/* Đã có khoản chi → hai nút chia đôi hàng. Chữ nhỏ hơn và nowrap
+                để "Xem quyết toán →" không vỡ ở bề ngang 320px. */}
+            <div className="flex gap-2">
+              {hasExpenses && (
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="h-[54px] min-w-0 flex-1 rounded-[18px] border-2 border-dashed border-success-border bg-success-soft text-[14px] font-extrabold whitespace-nowrap text-success-text transition-colors hover:bg-success-badge"
+                >
+                  ＋ Thêm khoản chi
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={goToSettlement}
+                disabled={!hasExpenses}
+                className={`h-[54px] min-w-0 flex-1 rounded-[18px] bg-success font-extrabold whitespace-nowrap text-white shadow-[0_8px_18px_-6px_rgba(47,191,155,.6)] transition-colors hover:bg-success-hover disabled:bg-disabled disabled:shadow-none ${
+                  hasExpenses ? 'text-[14px]' : 'text-[17px]'
+                }`}
+              >
+                {isSettled ? 'Xem quyết toán →' : 'Quyết toán →'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -500,13 +612,13 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
               <button
                 type="button"
                 onClick={() => {
-                  const action = confirmReset
+                  const { run } = confirmReset
                   setConfirmReset(null)
-                  action()
+                  run()
                 }}
                 className="h-11 flex-1 rounded-[14px] bg-primary text-[14px] font-extrabold text-white"
               >
-                Vẫn sửa
+                {confirmReset.confirmLabel}
               </button>
             </div>
           </div>
@@ -516,6 +628,22 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
       {toast && (
         <div className="animate-wk-rise pointer-events-none fixed inset-x-5 bottom-24 z-50 mx-auto max-w-[390px] rounded-[16px] bg-dark px-4 py-3 text-center text-[13.5px] font-bold text-white">
           {toast}
+        </div>
+      )}
+
+      {/* Toast hoàn tác — khác toast thường: có nút bấm nên phải nhận sự kiện. */}
+      {undoDraft && (
+        <div className="animate-wk-rise fixed inset-x-5 bottom-24 z-50 mx-auto flex max-w-[390px] items-center gap-3 rounded-[16px] bg-dark py-2.5 pr-2.5 pl-4">
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-white">
+            Đã xóa &quot;{undoDraft.title}&quot;
+          </span>
+          <button
+            type="button"
+            onClick={() => void undoDelete(undoDraft)}
+            className="h-9 shrink-0 rounded-[12px] px-3 text-[13.5px] font-extrabold text-warning transition-colors hover:bg-white/10"
+          >
+            Hoàn tác
+          </button>
         </div>
       )}
 
