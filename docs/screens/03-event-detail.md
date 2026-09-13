@@ -69,7 +69,7 @@ Quan hệ `Todo.eventId → Event.id`, **ON DELETE CASCADE** (xóa hẳn sự ki
 └────────────────────────────────┘
 ```
 
-Chuyển sang tab "Đã chi" thì vùng giữa đổi thành dòng tổng chi tiêu (sticky) + danh sách khoản chi + nút "＋ Thêm khoản chi" — xem §6.
+Chuyển sang tab "Đã chi" thì vùng giữa đổi thành dòng tổng chi tiêu (sticky) + danh sách khoản chi — xem §6. Nút "＋ Thêm khoản chi" nằm ở đâu thì tùy đã có khoản chi hay chưa, xem §6.5.
 
 ---
 
@@ -80,7 +80,7 @@ Chuyển sang tab "Đã chi" thì vùng giữa đổi thành dòng tổng chi ti
 | Nút `←` | Về Home (`/`) |
 | Tên sự kiện | Từ `event.name`, 1 dòng, tràn thì `…` |
 | Ngày | `DD/MM/YYYY` |
-| **Sao chép link chia sẻ** | Copy `https://{domain}/e/{shareId}` vào clipboard + toast *"Đã sao chép link"*. Vùng chạm ≥ 44×44px. |
+| **Nút "🔗 Link"** | Copy `https://{domain}/e/{shareId}` vào clipboard + toast *"Đã sao chép link"*. Vùng chạm ≥ 44×44px. Nhãn hiển thị chỉ là **"Link"**, giống hệt màn 04. Vì nhãn ngắn không tự nói ra việc nó làm, nút bắt buộc mang `aria-label="Sao chép link chia sẻ"`. |
 
 ### 3.1. Nút `⋯` — Sửa / Xóa hẳn sự kiện
 
@@ -228,14 +228,30 @@ Validate:
 - Lỗi hiện dạng khối inline trong sheet, không dùng toast.
 - **Lưu thành công → đóng sheet + toast.**
 
+### 6.5. Nút "＋ Thêm khoản chi" đổi chỗ theo trạng thái [ĐÃ CHỐT — 13/09/2026]
+
+Nút này **không đứng yên một chỗ**. Vị trí phụ thuộc `expenses.length`:
+
+| Trạng thái | Nút "＋ Thêm khoản chi" ở đâu | Hàng CTA đáy màn |
+|---|---|---|
+| **Chưa có khoản chi nào** | Trong luồng nội dung, **dưới khung rỗng**, full-width — đúng như trước giờ | Chỉ "Quyết toán →" (disabled), full-width, kèm chú thích nhỏ |
+| **Đã có ít nhất 1 khoản chi** | **Chuyển xuống hàng CTA cố định đáy màn**, nửa bên trái | "＋ Thêm khoản chi" \| "Quyết toán →" — **mỗi nút một nửa** |
+
+Khi đã chuyển xuống, **không** còn nút thêm nào trong luồng nội dung nữa — chỉ có đúng một lối thêm khoản chi tại mỗi thời điểm, để không ai phải đoán hai nút giống nhau có khác gì nhau không.
+
+Lý do đổi: danh sách càng dài thì nút nằm dưới cùng càng xa, phải cuộn hết mới thêm được khoản tiếp theo. Đưa vào thanh cố định thì nó luôn trong tầm tay. Nhưng lúc danh sách còn rỗng thì ngược lại — nút nằm ngay dưới câu "Thêm khoản đầu tiên nhé!" mới đúng chỗ, và thanh đáy lúc đó đang bận giải thích vì sao chưa quyết toán được.
+
+Chi tiết kích thước/màu: `design_handoff/README.md` mục "3. Event detail".
+
 ---
 
 ## 7. Nút "Quyết toán"
 
-- **Fixed ở đáy màn hình**, full-width, **chỉ hiện ở tab "Đã chi"**.
+- **Fixed ở đáy màn hình**, **chỉ hiện ở tab "Đã chi"**.
+- **Chiều ngang tùy trạng thái** — full-width khi chưa có khoản chi, **một nửa** khi đã có (nửa kia là "＋ Thêm khoản chi"). Xem §6.5.
 - **Disable khi chưa có khoản chi nào** — xét theo `expenses`, **không** tính todo. Một sự kiện có 10 món cần chi nhưng chưa ghi khoản chi nào thì vẫn chưa quyết toán được.
-- Khi disable, chú thích nhỏ: *"Thêm ít nhất một khoản chi để quyết toán."*
-- Nếu `settledAt != null`, nhãn đổi thành **"Xem quyết toán"**.
+- Khi disable, chú thích nhỏ: *"Thêm ít nhất một khoản chi để quyết toán."* Chú thích này chỉ xuất hiện ở trạng thái full-width, nên không bao giờ phải chen vào hàng hai nút.
+- Nếu `settledAt != null`, nhãn đổi thành **"Xem quyết toán"**. Đây là nhãn dài nhất có thể xuất hiện ở nửa nút — cùng với "＋ Thêm khoản chi", cả hai phải `nowrap` và đủ nhỏ để không vỡ ở bề ngang 320px.
 
 > **[ĐÃ CHỐT — đè lên handoff]** Handoff mục "3. Event detail" ghi *"CTA 'Quyết toán →' ở đáy màn hiển thị ở cả 2 tab"*. Chủ dự án chốt lại: **chỉ tab "Đã chi"**. Lý do hợp lý: tab "Cần chi" không có số tiền nào, đặt nút quyết toán ở đó dễ khiến người dùng tưởng danh sách cần mua cũng được tính tiền.
 

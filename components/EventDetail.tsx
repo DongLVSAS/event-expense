@@ -62,6 +62,7 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
   }, [])
 
   const total = event.expenses.reduce((sum, e) => sum + e.amount, 0)
+  const hasExpenses = event.expenses.length > 0
   const todoCount = event.todos.length
   const boughtCount = event.todos.filter((t) => t.bought).length
   const payerOf = (id: string) => event.participants.find((p) => p.id === id)
@@ -226,9 +227,10 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
               <button
                 type="button"
                 onClick={copyLink}
+                aria-label="Sao chép link chia sẻ"
                 className="h-11 rounded-full bg-primary-soft px-3.5 text-[12.5px] font-extrabold whitespace-nowrap text-primary-text transition-colors hover:bg-primary-badge"
               >
-                🔗 Sao chép link
+                🔗 Link
               </button>
               <button
                 type="button"
@@ -345,13 +347,18 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
             </ul>
           )}
 
-          <button
-            type="button"
-            onClick={openAdd}
-            className="mt-3 h-[50px] w-full rounded-[16px] border-2 border-dashed border-success-border bg-success-soft text-[15px] font-extrabold text-success-text transition-colors hover:bg-success-badge"
-          >
-            ＋ Thêm khoản chi
-          </button>
+          {/* Chưa có khoản chi nào → nút thêm nằm ngay dưới khung rỗng.
+              Có rồi → nó chuyển xuống hàng CTA đáy màn, xem §6.5.
+              Cố ý chỉ có ĐÚNG MỘT lối thêm tại mỗi thời điểm. */}
+          {!hasExpenses && (
+            <button
+              type="button"
+              onClick={openAdd}
+              className="mt-3 h-[50px] w-full rounded-[16px] border-2 border-dashed border-success-border bg-success-soft text-[15px] font-extrabold text-success-text transition-colors hover:bg-success-badge"
+            >
+              ＋ Thêm khoản chi
+            </button>
+          )}
         </div>
           </>
         )}
@@ -363,19 +370,34 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
       {tab === 'paid' && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-cream via-cream/95 to-transparent pt-8 pb-[max(20px,env(safe-area-inset-bottom))]">
           <div className="pointer-events-auto mx-auto w-full max-w-[430px] px-5">
-            {event.expenses.length === 0 && (
+            {!hasExpenses && (
               <p className="mb-1.5 text-center text-[12px] text-faint">
                 Thêm ít nhất một khoản chi để quyết toán.
               </p>
             )}
-            <button
-              type="button"
-              onClick={goToSettlement}
-              disabled={event.expenses.length === 0}
-              className="h-[54px] w-full rounded-[18px] bg-success text-[17px] font-extrabold text-white shadow-[0_8px_18px_-6px_rgba(47,191,155,.6)] transition-colors hover:bg-success-hover disabled:bg-disabled disabled:shadow-none"
-            >
-              {isSettled ? 'Xem quyết toán →' : 'Quyết toán →'}
-            </button>
+            {/* Đã có khoản chi → hai nút chia đôi hàng. Chữ nhỏ hơn và nowrap
+                để "Xem quyết toán →" không vỡ ở bề ngang 320px. */}
+            <div className="flex gap-2">
+              {hasExpenses && (
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="h-[54px] min-w-0 flex-1 rounded-[18px] border-2 border-dashed border-success-border bg-success-soft text-[14px] font-extrabold whitespace-nowrap text-success-text transition-colors hover:bg-success-badge"
+                >
+                  ＋ Thêm khoản chi
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={goToSettlement}
+                disabled={!hasExpenses}
+                className={`h-[54px] min-w-0 flex-1 rounded-[18px] bg-success font-extrabold whitespace-nowrap text-white shadow-[0_8px_18px_-6px_rgba(47,191,155,.6)] transition-colors hover:bg-success-hover disabled:bg-disabled disabled:shadow-none ${
+                  hasExpenses ? 'text-[14px]' : 'text-[17px]'
+                }`}
+              >
+                {isSettled ? 'Xem quyết toán →' : 'Quyết toán →'}
+              </button>
+            </div>
           </div>
         </div>
       )}
