@@ -209,7 +209,7 @@ Hai thao tác:
 
 Tạo hình (nền danger lộ ra ở mép đang vuốt tới, icon thùng rác, ngưỡng 35%, animation): **theo `design_handoff/README.md` mục "3. Event detail"**. Phần nghiệp vụ:
 
-- **Không có popup xác nhận.** Xóa ngay khi thả tay qua ngưỡng, bù lại bằng **toast "Hoàn tác"** giữ **5 giây**.
+- **Không có popup xác nhận.** Xóa ngay khi thả tay qua ngưỡng, bù lại bằng **toast "Hoàn tác"** giữ **3 giây**.
 - Vuốt trên sự kiện **đã quyết toán** (`settledAt != null`) → thẻ **bật về chỗ cũ** và hiện dialog *"Kết quả quyết toán sẽ được tính lại"* trước, y như khi tap để sửa (§8). Không được lặng lẽ xóa sạch đánh dấu Done của cả nhóm chỉ vì một cú vuốt.
 - Thẻ đang vuốt dở mà polling trả về dữ liệu mới → **không** giật thẻ về; cử chỉ đang diễn ra luôn được ưu tiên.
 
@@ -227,7 +227,7 @@ Hoàn tác **tạo lại** khoản chi bằng `POST /api/events/{shareId}/expens
 
 Dòng cuối là điều quan trọng nhất: hoàn tác cứu được *dữ liệu khoản chi*, **không** cứu được *tiến độ quyết toán*. Đó chính là lý do sự kiện đã quyết toán vẫn phải hỏi trước khi vuốt.
 
-- Toast biến mất sau 5s hoặc khi người dùng xóa khoản khác → lúc đó mất đường hoàn tác. Không xếp hàng nhiều toast hoàn tác cùng lúc; khoản mới vuốt thay chỗ khoản cũ.
+- Toast biến mất sau 3s hoặc khi người dùng xóa khoản khác → lúc đó mất đường hoàn tác. Không xếp hàng nhiều toast hoàn tác cùng lúc; khoản mới vuốt thay chỗ khoản cũ.
 - Hoàn tác hỏng (mất mạng) → toast đỏ báo lỗi, khoản chi vẫn ở trạng thái đã xóa.
 
 ### 6.4. Bottom sheet — thêm / sửa khoản chi

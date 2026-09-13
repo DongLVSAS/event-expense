@@ -18,6 +18,8 @@ import { formatYen } from '@/lib/settlement'
 // Giao diện: docs/design_handoff/README.md mục "3. Event detail"
 
 const POLL_MS = 10_000
+/** Toast "Hoàn tác" sau khi vuốt xóa giữ bao lâu. Spec: §6.3.1 + handoff mục "3. Event detail". */
+const UNDO_MS = 3_000
 
 async function fetcher(url: string): Promise<EventDTO> {
   const res = await fetch(url)
@@ -51,7 +53,7 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
   const [confirmReset, setConfirmReset] = useState<null | { run: () => void; confirmLabel: string }>(
     null
   )
-  /** Khoản chi vừa vuốt xóa, giữ 5s để hoàn tác. Xem §6.3.1. */
+  /** Khoản chi vừa vuốt xóa, giữ UNDO_MS để hoàn tác. Xem §6.3.1. */
   const [undoDraft, setUndoDraft] = useState<ExpenseDraft | null>(null)
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -159,7 +161,7 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
   // ---- Vuốt để xóa (§6.3.1) ----------------------------------------------
   //
   // Khác nút Xóa trong sheet: không có bước xác nhận, bù lại bằng toast hoàn
-  // tác 5 giây. Thẻ đã trượt khỏi màn rồi nên xóa optimistic luôn, đợi server
+  // tác ngắn (UNDO_MS). Thẻ đã trượt khỏi màn rồi nên xóa optimistic luôn, đợi server
   // mới bỏ thẻ đi thì danh sách sẽ khựng lại một nhịp thấy rõ.
   function clearUndo() {
     if (undoTimer.current) clearTimeout(undoTimer.current)
@@ -194,7 +196,7 @@ export function EventDetail({ initialEvent }: { initialEvent: EventDTO }) {
     }
 
     setUndoDraft({ title: expense.title, amount: expense.amount, payerId: expense.payerId })
-    undoTimer.current = setTimeout(() => setUndoDraft(null), 5000)
+    undoTimer.current = setTimeout(() => setUndoDraft(null), UNDO_MS)
   }
 
   /**
