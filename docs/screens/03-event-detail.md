@@ -151,7 +151,8 @@ Danh sách những món **cần mua**, dùng khi nhóm mới lên kế hoạch v
 ### 5.3. Hành vi
 
 - Tick là **toggle thuần**: tick rồi bỏ tick lại được.
-- **Không có toast** cho thêm / tick / xóa món — thao tác nhẹ, phản hồi đã nằm ngay trên thẻ.
+- **Optimistic update** — xem §12. Tick / thêm / xóa hiện ra ngay, không đợi server; nút **không** bị `disabled` trong lúc chờ.
+- **Không có toast** cho thêm / tick / xóa món — thao tác nhẹ, phản hồi đã nằm ngay trên thẻ. (Toast đỏ khi request hỏng thì vẫn có — xem §12.)
 - **Không đụng tới quyết toán**: không tăng `dataVersion`, không xóa `TransferStatus`, không reset `settledAt`. Vì vậy cũng **không** hiện dialog *"Kết quả quyết toán sẽ được tính lại"* dù sự kiện đã xong.
 - Không giới hạn số món.
 
@@ -316,3 +317,36 @@ Sửa **todo** thì không hỏi gì.
 | DELETE | `/api/events/{shareId}/todos/{id}` | Xóa món cần chi |
 
 Ba endpoint `todos` **không** đi qua `mutateEventData()` — đó là helper reset quyết toán, dùng nhầm sẽ xóa oan đánh dấu Done của mọi người.
+
+### 11.1. Mọi endpoint ghi đều trả về `EventDTO` đầy đủ [ĐÃ CHỐT]
+
+Khi thành công, mọi endpoint ở bảng trên trả về **nguyên `EventDTO` mới nhất** — đúng hình dạng mà `GET /api/events/{shareId}` trả về — chứ không phải riêng bản ghi vừa tạo/sửa, và không phải `204 No Content`.
+
+- Client nạp thẳng kết quả này vào cache SWR, **không gọi `GET` lại**. Trước đây mỗi thao tác tốn hai lượt HTTP (ghi, rồi nạp lại); giờ còn một.
+- Server đọc lại dữ liệu **trong chính transaction đã ghi**, nên không tốn thêm lượt đi-về DB nào và không bao giờ trả về ảnh chụp cũ hơn lệnh ghi vừa rồi.
+- Mã trạng thái: `201` cho POST, `200` cho PATCH/DELETE. Riêng `DELETE /api/events/{shareId}` (xóa hẳn sự kiện) vẫn là `204` — sau đó không còn sự kiện nào để trả về.
+- Lỗi vẫn giữ nguyên hình dạng cũ: `{ error: string }` kèm mã 400/404/409.
+
+---
+
+## 12. Optimistic update [ĐÃ CHỐT]
+
+Mọi thao tác ghi ở màn này **hiện kết quả ngay trên giao diện trước khi server trả lời**. Đây là thứ quyết định cảm giác nhanh/chậm của app — độ trễ mạng không được phép biến thành độ trễ thao tác.
+
+Quy tắc chung:
+
+1. **Vẽ ngay trạng thái mong muốn** vào cache SWR khi người dùng chạm.
+2. Gửi request. Thành công → thay cache bằng `EventDTO` server trả về (§11.1), **không** refetch.
+3. Thất bại → **rollback** về trạng thái trước đó + **toast đỏ** báo lỗi.
+4. Trong lúc chờ, **không `disabled`** nút vừa bấm. Người dùng đã thấy kết quả rồi; khóa nút chỉ làm màn hình giật.
+
+Ngoại lệ — vẫn chặn và đợi server:
+
+| Thao tác | Vì sao không optimistic |
+|---|---|
+| Lưu khoản chi trong bottom sheet | Server có thể trả lỗi validate (`payerId` không thuộc sự kiện…). Sheet phải đóng *sau* khi biết chắc đã lưu, nếu không lỗi hiện ra khi sheet đã biến mất. |
+| Xóa hẳn sự kiện | Không hoàn tác được, và sau đó phải điều hướng đi nơi khác. |
+
+Với các thao tác nhẹ (tick / thêm / xóa món cần chi) thì luôn optimistic.
+
+**Món chưa lưu xong:** món vừa thêm mang một id tạm ở phía client cho tới khi server trả về id thật. Tick hoặc xóa nó trong khoảng đó sẽ gửi id không tồn tại lên server, nên client **chặn tại chỗ** và báo *"Món này đang được lưu, thử lại sau một giây."* thay vì gửi request rồi rollback.

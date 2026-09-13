@@ -1,12 +1,17 @@
 import { z } from 'zod'
+import { eventQuery, toEventDTO } from '@/lib/get-event'
 import { prisma } from '@/lib/prisma'
-import { computeTransfers, syncSettledAt } from '@/lib/settle-state'
+import { computeTransfers, settledAtChange } from '@/lib/settle-state'
 
 // PUT /api/events/{shareId}/transfers/{transferKey} — bật/tắt Done một giao dịch.
 // Spec: docs/screens/04-settlement.md §4.3
 //
 // Kết quả quyết toán KHÔNG lưu DB. Server tính lại settle() ở mỗi request để
 // xác minh transferKey có thật ở version hiện tại — không tin key từ client.
+//
+// Hai lượt đi-về DB: một lượt đọc để tính, một lượt ghi + đọc lại. Việc quyết
+// settledAt là phép tính thuần trên dữ liệu vừa đọc nên không cần truy vấn
+// thêm — settledAtChange() trả về lệnh ghi để nhét chung vào transaction.
 
 const ToggleInput = z.object({
   done: z.boolean(),
@@ -71,8 +76,10 @@ export async function PUT(
   if (parsed.data.done) doneKeys.add(transferKey)
   else doneKeys.delete(transferKey)
 
-  const settledAt = await prisma.$transaction(async (tx) => {
-    await tx.transferStatus.upsert({
+  const { ops } = settledAtChange(event, transfers, doneKeys)
+
+  const results = await prisma.$transaction([
+    prisma.transferStatus.upsert({
       where: { eventId_transferKey: { eventId: event.id, transferKey } },
       create: {
         eventId: event.id,
@@ -81,14 +88,16 @@ export async function PUT(
         done: parsed.data.done,
       },
       update: { done: parsed.data.done, dataVersion: event.dataVersion },
-    })
+    }),
+    ...ops,
+    eventQuery(shareId),
+  ])
 
-    return syncSettledAt(tx, event, transfers, doneKeys)
-  })
+  // Phần tử cuối luôn là kết quả của eventQuery — $transaction giữ nguyên thứ tự.
+  const row = results.at(-1) as Awaited<ReturnType<typeof eventQuery>>
+  if (!row) {
+    return Response.json({ error: 'Không tìm thấy sự kiện này.' }, { status: 404 })
+  }
 
-  return Response.json({
-    doneTransferKeys: [...doneKeys],
-    settledAt: settledAt?.toISOString() ?? null,
-    dataVersion: event.dataVersion,
-  })
+  return Response.json(toEventDTO(row))
 }

@@ -20,7 +20,7 @@ Phong cách UI thân thiện, vui vẻ, lấy cảm hứng từ Chouseisan (調�
 - **Frontend + Backend: Next.js (App Router) + TypeScript** — một repo duy nhất. Next.js chạy trên Node.js nên phần server nằm luôn trong project: API viết bằng Route Handlers (`app/api/**/route.ts`), truy cập DB qua Prisma ở phía server. Không cần dựng thêm một service backend riêng.
 - **UI: Tailwind CSS** + thư viện confetti/fireworks cho hiệu ứng chúc mừng.
 - **DB: PostgreSQL (Neon) + Prisma.** `DATABASE_URL` là biến môi trường phía server, tuyệt đối không để lộ ra client. Mọi truy vấn Prisma chỉ chạy trong Route Handler / Server Component / Server Action.
-- **Deploy: Vercel**, region Tokyo (hnd1). Mỗi Route Handler được deploy thành một serverless function.
+- **Deploy: Vercel**, region **Singapore (`sin1`)** — đổi từ `hnd1` để trùng region của Neon (`ap-southeast-1`); xem CLAUDE.md mục "Region phải trùng region của Neon". Mỗi Route Handler được deploy thành một serverless function.
 
 ### Mô hình chia sẻ & quyền truy cập
 

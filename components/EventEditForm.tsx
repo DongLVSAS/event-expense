@@ -34,18 +34,20 @@ export function EventEditForm({ initialEvent }: { initialEvent: EventDTO }) {
   const isFull = participants.length >= MAX_PARTICIPANTS
   const settledWarning = initialEvent.settledAt !== null
 
-  async function call(url: string, init: RequestInit): Promise<unknown | null> {
+  // Mọi endpoint ghi trả về nguyên EventDTO mới nhất — xem
+  // docs/screens/03-event-detail.md §11.1. Nhờ vậy sau mỗi thao tác chỉ cần
+  // lấy `participants` từ response, không phải GET lại sự kiện.
+  async function call(url: string, init: RequestInit): Promise<EventDTO | null> {
     setBusy(true)
     setError('')
     try {
       const res = await fetch(url, init)
-      if (res.status === 204) return {}
       const body = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(body?.error ?? 'Không lưu được. Thử lại nhé.')
+        setError((body as { error?: string } | null)?.error ?? 'Không lưu được. Thử lại nhé.')
         return null
       }
-      return body
+      return body as EventDTO
     } catch {
       setError('Không kết nối được máy chủ. Thử lại nhé.')
       return null
@@ -60,32 +62,32 @@ export function EventEditForm({ initialEvent }: { initialEvent: EventDTO }) {
     const character = pickRandomCharacter(participants.map((p) => p.characterId))
     if (!character) return setError('Đã dùng hết nhân vật.')
 
-    const created = (await call(`/api/events/${shareId}/participants`, {
+    const updated = await call(`/api/events/${shareId}/participants`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: trimmed, characterId: character.id }),
-    })) as EventParticipantDTO | null
+    })
 
-    if (created) {
-      setParticipants((prev) => [...prev, created])
+    if (updated) {
+      setParticipants(updated.participants)
       setPersonInput('')
       personInputRef.current?.focus()
     }
   }
 
   async function removePerson(id: string) {
-    const ok = await call(`/api/events/${shareId}/participants/${id}`, { method: 'DELETE' })
-    if (ok) setParticipants((prev) => prev.filter((p) => p.id !== id))
+    const updated = await call(`/api/events/${shareId}/participants/${id}`, { method: 'DELETE' })
+    if (updated) setParticipants(updated.participants)
   }
 
   async function patchPerson(id: string, next: { name: string; characterId: string }) {
-    const updated = (await call(`/api/events/${shareId}/participants/${id}`, {
+    const updated = await call(`/api/events/${shareId}/participants/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(next),
-    })) as EventParticipantDTO | null
+    })
 
-    if (updated) setParticipants((prev) => prev.map((p) => (p.id === id ? updated : p)))
+    if (updated) setParticipants(updated.participants)
   }
 
   function rerollCharacter(p: EventParticipantDTO) {
@@ -110,12 +112,12 @@ export function EventEditForm({ initialEvent }: { initialEvent: EventDTO }) {
     if (participants.length < MIN_PARTICIPANTS)
       return setError('Sự kiện cần tối thiểu 2 người tham gia.')
 
-    const ok = await call(`/api/events/${shareId}`, {
+    const updated = await call(`/api/events/${shareId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name.trim(), date }),
     })
-    if (ok) {
+    if (updated) {
       router.push(`/e/${shareId}`)
       router.refresh()
     }

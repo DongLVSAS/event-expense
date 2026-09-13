@@ -6,6 +6,7 @@ import useSWR from 'swr'
 import { CharacterAvatar } from '@/components/CharacterAvatar'
 import { Confetti } from '@/components/Confetti'
 import type { EventDTO } from '@/lib/event-dto'
+import { optimisticWrite } from '@/lib/optimistic'
 import {
   formatBalance,
   formatYen,
@@ -41,7 +42,6 @@ export function SettlementView({ initialEvent }: { initialEvent: EventDTO }) {
   const event = data ?? initialEvent
 
   const [toast, setToast] = useState('')
-  const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
 
   // Pháo hoa chỉ bắn đúng lúc CHUYỂN sang hoàn tất, không bắn lại khi mở lại màn.
@@ -84,39 +84,41 @@ export function SettlementView({ initialEvent }: { initialEvent: EventDTO }) {
     if (transfers.length > 0 || event.settledAt !== null || settleRequested.current) return
     if (event.expenses.length === 0) return
     settleRequested.current = true
-    void fetch(`/api/events/${shareId}/settle`, { method: 'POST' }).then(() => mutate())
+    void fetch(`/api/events/${shareId}/settle`, { method: 'POST' })
+      .then((res) => (res.ok ? (res.json() as Promise<EventDTO>) : null))
+      .then((updated) => (updated ? mutate(updated, { revalidate: false }) : mutate()))
   }, [transfers.length, event.settledAt, event.expenses.length, shareId, mutate])
 
+  // Spec §4.3: tick hiện ra NGAY, không đợi server; hỏng thì rollback + toast.
+  // Nút cũng không bị disabled trong lúc chờ.
   async function toggleDone(transferKey: string, next: boolean) {
-    setPendingKey(transferKey)
-    try {
-      const res = await fetch(
-        `/api/events/${shareId}/transfers/${encodeURIComponent(transferKey)}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ done: next, dataVersion: event.dataVersion }),
-        }
-      )
+    const nextKeys = next
+      ? [...event.doneTransferKeys, transferKey]
+      : event.doneTransferKeys.filter((k) => k !== transferKey)
 
-      if (res.status === 409) {
-        // Người khác vừa sửa dữ liệu gốc — không retry mù, nạp lại rồi để người
-        // dùng tick lại trên con số mới.
-        showToast('Dữ liệu vừa được người khác cập nhật')
-        await mutate()
-        return
-      }
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        showToast(body?.error ?? 'Không lưu được. Thử lại nhé.')
-        return
-      }
+    // settledAt do server quyết (xem lib/settle-state.ts). Ảnh optimistic chỉ
+    // đoán phần checkbox, cố ý GIỮ NGUYÊN settledAt để pháo hoa không bắn sớm
+    // rồi bắn lại lần nữa khi response về.
+    const optimistic: EventDTO = { ...event, doneTransferKeys: nextKeys }
+
+    const written = await optimisticWrite(mutate, optimistic, () =>
+      fetch(`/api/events/${shareId}/transfers/${encodeURIComponent(transferKey)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: next, dataVersion: event.dataVersion }),
+      })
+    )
+
+    if (written.ok) return
+
+    if (written.status === 409) {
+      // Người khác vừa sửa dữ liệu gốc — không retry mù, nạp lại rồi để người
+      // dùng tick lại trên con số mới.
+      showToast('Dữ liệu vừa được người khác cập nhật')
       await mutate()
-    } catch {
-      showToast('Không kết nối được máy chủ.')
-    } finally {
-      setPendingKey(null)
+      return
     }
+    showToast(written.message)
   }
 
   async function copyLink() {
@@ -242,9 +244,8 @@ export function SettlementView({ initialEvent }: { initialEvent: EventDTO }) {
                     <button
                       type="button"
                       onClick={() => void toggleDone(t.transferKey, !done)}
-                      disabled={pendingKey === t.transferKey}
                       aria-pressed={done}
-                      className={`h-11 w-[58px] shrink-0 rounded-[12px] text-[12px] font-extrabold transition-colors disabled:opacity-50 ${
+                      className={`h-11 w-[58px] shrink-0 rounded-[12px] text-[12px] font-extrabold transition-colors ${
                         done
                           ? 'bg-success text-white'
                           : 'border-[1.5px] border-border-card bg-surface text-muted hover:border-success-border'
@@ -266,7 +267,9 @@ export function SettlementView({ initialEvent }: { initialEvent: EventDTO }) {
         {(allDone || nothingToTransfer) && (
           <div className="animate-wk-pop mt-6 rounded-[22px] bg-gradient-to-r from-[#FFF1D6] to-[#FFE3EC] px-5 py-6 text-center">
             <p className="font-display text-[18px] leading-snug font-extrabold text-danger">
-              Chúc mừng bạn đã có chuyến đi vui vẻ! またね!
+              Chúc mừng bạn đã có chuyến đi vui vẻ!
+              <br />
+              またね!
             </p>
           </div>
         )}

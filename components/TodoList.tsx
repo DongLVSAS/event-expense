@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { EventTodoDTO } from '@/lib/event-dto'
+import type { EventDTO, EventTodoDTO } from '@/lib/event-dto'
+import { optimisticWrite } from '@/lib/optimistic'
 
 // Tab "Cần chi" — checklist món cần mua.
 // Nghiệp vụ: docs/screens/03-event-detail.md §5
@@ -9,84 +10,100 @@ import type { EventTodoDTO } from '@/lib/event-dto'
 //
 // Không có số tiền, không có người chi, không đụng tới quyết toán.
 
+const TEMP_PREFIX = 'tmp-'
+const SAVING_MSG = 'Món này đang được lưu, thử lại sau một giây.'
+
 type Props = {
   shareId: string
-  todos: EventTodoDTO[]
-  /** Nạp lại dữ liệu sự kiện sau mỗi thay đổi. */
-  onChanged: () => Promise<unknown>
+  /** Sự kiện hiện tại — cần nguyên bản để dựng ảnh optimistic. */
+  event: EventDTO
+  /** `mutate` của SWR cho key sự kiện. */
+  write: Parameters<typeof optimisticWrite>[0]
 }
 
-export function TodoList({ shareId, todos, onChanged }: Props) {
+export function TodoList({ shareId, event, write }: Props) {
+  const todos = event.todos
   const [input, setInput] = useState('')
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Món vừa thêm chưa có id thật. Dùng id tạm để React có key ổn định cho tới
+  // khi server trả về — spec §12: vẽ ngay, không đợi mạng.
+  const tempId = () => `${TEMP_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const isPending = (id: string) => id.startsWith(TEMP_PREFIX)
 
   async function addTodo() {
     const title = input.trim()
     // Chuỗi rỗng: bỏ qua im lặng. Đây là ghi chú nhanh, không phải form.
-    if (!title || adding) return
+    if (!title) return
 
-    setAdding(true)
+    // Xóa ô nhập ngay để gõ tiếp món sau — không đợi server.
+    setInput('')
     setError('')
-    try {
-      const res = await fetch(`/api/events/${shareId}/todos`, {
+    inputRef.current?.focus()
+
+    const sortOrder = todos.reduce((max, t) => Math.max(max, t.sortOrder), -1) + 1
+    const optimistic: EventDTO = {
+      ...event,
+      todos: [...todos, { id: tempId(), title, bought: false, sortOrder }],
+    }
+
+    const result = await optimisticWrite(write, optimistic, () =>
+      fetch(`/api/events/${shareId}/todos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        setError(body?.error ?? 'Không thêm được. Thử lại nhé.')
-        return
-      }
-      setInput('')
-      await onChanged()
-      inputRef.current?.focus()
-    } catch {
-      setError('Không kết nối được máy chủ.')
-    } finally {
-      setAdding(false)
+    )
+    if (!result.ok) {
+      setError(result.message)
+      // Trả lại chữ đã gõ để người dùng không phải nhập lại.
+      setInput((current) => (current === '' ? title : current))
     }
   }
 
   async function toggleBought(todo: EventTodoDTO) {
-    setBusyId(todo.id)
+    // Món vừa thêm chưa có id thật cho tới khi server trả lời. Gửi id tạm lên
+    // sẽ nhận 404 rồi rollback — thà báo một câu rõ ràng.
+    if (isPending(todo.id)) return setError(SAVING_MSG)
     setError('')
-    try {
-      const res = await fetch(`/api/events/${shareId}/todos/${todo.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bought: !todo.bought }),
-      })
-      if (!res.ok && res.status !== 404) {
-        setError('Không lưu được. Thử lại nhé.')
-        return
-      }
-      await onChanged()
-    } catch {
-      setError('Không kết nối được máy chủ.')
-    } finally {
-      setBusyId(null)
+
+    const optimistic: EventDTO = {
+      ...event,
+      todos: todos.map((t) => (t.id === todo.id ? { ...t, bought: !t.bought } : t)),
     }
+
+    const result = await optimisticWrite(
+      write,
+      optimistic,
+      () =>
+        fetch(`/api/events/${shareId}/todos/${todo.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bought: !todo.bought }),
+        }),
+      'Món này vừa bị người khác xóa.'
+    )
+    if (!result.ok) setError(result.message)
   }
 
   async function removeTodo(todoId: string) {
-    setBusyId(todoId)
+    if (isPending(todoId)) return setError(SAVING_MSG)
     setError('')
-    try {
-      const res = await fetch(`/api/events/${shareId}/todos/${todoId}`, { method: 'DELETE' })
-      if (!res.ok && res.status !== 404) {
-        setError('Không xóa được. Thử lại nhé.')
-        return
-      }
-      await onChanged()
-    } catch {
-      setError('Không kết nối được máy chủ.')
-    } finally {
-      setBusyId(null)
+
+    const optimistic: EventDTO = {
+      ...event,
+      todos: todos.filter((t) => t.id !== todoId),
     }
+
+    const result = await optimisticWrite(
+      write,
+      optimistic,
+      () => fetch(`/api/events/${shareId}/todos/${todoId}`, { method: 'DELETE' }),
+      'Món này vừa bị người khác xóa.'
+    )
+    // Người khác xóa trước: trạng thái mong muốn đã đạt, không cần báo lỗi.
+    if (!result.ok && result.status !== 404) setError(result.message)
   }
 
   return (
@@ -109,7 +126,7 @@ export function TodoList({ shareId, todos, onChanged }: Props) {
         <button
           type="button"
           onClick={() => void addTodo()}
-          disabled={adding || !input.trim()}
+          disabled={!input.trim()}
           aria-label="Thêm món cần mua"
           className="h-[50px] w-[50px] shrink-0 rounded-[16px] bg-success text-[22px] leading-none font-extrabold text-white transition-colors hover:bg-success-hover disabled:bg-disabled"
         >
@@ -143,12 +160,11 @@ export function TodoList({ shareId, todos, onChanged }: Props) {
               <button
                 type="button"
                 onClick={() => void toggleBought(todo)}
-                disabled={busyId === todo.id}
                 aria-pressed={todo.bought}
                 aria-label={todo.bought ? `Bỏ đánh dấu đã mua ${todo.title}` : `Đánh dấu đã mua ${todo.title}`}
                 // Ô tick thấy được là 30px theo handoff; vùng chạm phủ 44px bằng
                 // pseudo-element để vẫn đạt chuẩn tối thiểu.
-                className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] border-2 text-[15px] leading-none font-extrabold transition-colors before:absolute before:-inset-[7px] before:content-[''] disabled:opacity-50 ${
+                className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] border-2 text-[15px] leading-none font-extrabold transition-colors before:absolute before:-inset-[7px] before:content-[''] ${
                   todo.bought
                     ? 'border-[#17A673] bg-[#17A673] text-white'
                     : 'border-[#E3D9CE] bg-surface text-transparent'
@@ -175,9 +191,8 @@ export function TodoList({ shareId, todos, onChanged }: Props) {
               <button
                 type="button"
                 onClick={() => void removeTodo(todo.id)}
-                disabled={busyId === todo.id}
                 aria-label={`Xóa ${todo.title}`}
-                className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-faint transition-colors hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+                className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-faint transition-colors hover:bg-danger-soft hover:text-danger"
               >
                 ✕
               </button>
