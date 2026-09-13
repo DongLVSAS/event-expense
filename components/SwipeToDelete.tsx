@@ -18,6 +18,16 @@ const SLOP = 8
 /** Khớp với thời lượng transition bên dưới. */
 const LEAVE_MS = 180
 
+/**
+ * Rung nhẹ đúng lúc vượt ngưỡng — người dùng biết "thả ra là mất" mà không cần
+ * nhìn. Máy không hỗ trợ (iOS Safari) thì im lặng bỏ qua, không phải lỗi.
+ */
+function buzz() {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    navigator.vibrate(12)
+  }
+}
+
 type Props = {
   children: ReactNode
   /** Gọi khi người dùng vuốt qua ngưỡng rồi thả tay. */
@@ -40,6 +50,8 @@ export function SwipeToDelete({ children, onDelete, disabled = false }: Props) {
   /** Đã kéo thật sự → nuốt cú click kế tiếp để không mở sheet sửa. */
   const dragged = useRef(false)
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Lần vượt ngưỡng gần nhất — để chỉ rung ở đúng nhịp cắt qua, không rung liên tục. */
+  const wasPast = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -52,6 +64,7 @@ export function SwipeToDelete({ children, onDelete, disabled = false }: Props) {
 
   function reset() {
     axis.current = null
+    wasPast.current = false
     setDragging(false)
     setDx(0)
   }
@@ -65,6 +78,7 @@ export function SwipeToDelete({ children, onDelete, disabled = false }: Props) {
     startY.current = e.clientY
     axis.current = null
     dragged.current = false
+    wasPast.current = false
     setDragging(true)
   }
 
@@ -90,6 +104,14 @@ export function SwipeToDelete({ children, onDelete, disabled = false }: Props) {
 
     dragged.current = true
     setDx(deltaX)
+
+    // Chỉ rung ở nhịp vừa cắt qua ngưỡng, không rung mỗi pixel. Kéo ngược về
+    // rồi vượt lại thì rung tiếp — đó vẫn là một lần vượt ngưỡng mới.
+    const nowPast = width > 0 && Math.abs(deltaX) >= width * THRESHOLD_RATIO
+    if (nowPast !== wasPast.current) {
+      wasPast.current = nowPast
+      if (nowPast) buzz()
+    }
   }
 
   function onPointerUp() {

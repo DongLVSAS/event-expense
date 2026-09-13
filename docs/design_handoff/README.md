@@ -127,7 +127,7 @@ Segmented control: track bg `#F4EDE5`, radius 16px, padding 4px, gap 6px, margin
   - **Ngưỡng 35% bề ngang thẻ.** Chưa tới ngưỡng mà thả tay → thẻ bật về `translateX(0)` (`180ms cubic-bezier(.22,1,.36,1)`). Qua ngưỡng → nền đậm lên `#E11D48`, rung nhẹ (`navigator.vibrate(12)` nếu có), thả tay thì thẻ trượt hẳn ra khỏi màn theo hướng đang vuốt (`180ms ease-in`) rồi xóa.
   - Kéo dọc vẫn cuộn bình thường: chỉ bắt cử chỉ ngang khi `|dx| > |dy|`; thẻ đặt `touch-action: pan-y`.
   - Vuốt xong **không** mở sheet sửa — cử chỉ kéo nuốt luôn cú tap.
-  - Xóa xong hiện **toast có nút "Hoàn tác"** ở đáy màn, giữ 5s (khác toast thường: nền `#2E2A3B`, nút "Hoàn tác" chữ vàng `#FFD166`).
+  - Xóa xong hiện **toast có nút "Hoàn tác"** ở đáy màn, giữ 3s (khác toast thường: nền `#2E2A3B`, nút "Hoàn tác" chữ vàng `#FFD166`).
   - Nút **Xóa** trong bottom sheet **vẫn giữ** — vuốt không dùng được bằng bàn phím.
 - Empty: khung dashed `#EFE0D3` radius 20px.
 - Nút "＋ Thêm khoản chi": dashed teal, bg `#F1FBF7`. **Vị trí đổi theo việc đã có khoản chi hay chưa:**
