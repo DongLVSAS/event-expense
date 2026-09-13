@@ -196,9 +196,39 @@ Dòng này quan trọng: nó là thứ ngăn người dùng tưởng tick "đã 
 
 ### 6.3. Thao tác trên một dòng
 
-**[ĐÃ CHỐT — theo `design_handoff`]** Chỉ có **một** thao tác: tap vào card → mở **bottom sheet** ở chế độ sửa (prefill sẵn), trong sheet có nút **Xóa** viền danger.
+Hai thao tác:
 
-> Spec cũ dùng **swipe-left để xóa**. Cử chỉ đó **đã bỏ**.
+| Cử chỉ | Việc xảy ra |
+|---|---|
+| **Tap** vào card | Mở **bottom sheet** ở chế độ sửa (prefill sẵn), trong sheet có nút **Xóa** viền danger |
+| **Vuốt ngang** (trái *hoặc* phải) qua ngưỡng | **Xóa khoản chi** — xem §6.3.1 |
+
+> **[ĐÃ CHỐT — đè lên handoff, 13/09/2026]** Handoff bỏ cử chỉ vuốt, spec này trước đó ghi *"swipe-left đã bỏ"*. Chủ dự án chốt lại: **có vuốt để xóa, cả hai chiều.** Nút **Xóa** trong sheet **vẫn giữ nguyên** — vuốt là lối tắt, không phải lối duy nhất, vì cử chỉ vuốt không dùng được bằng bàn phím hay trình đọc màn hình.
+
+#### 6.3.1. Vuốt để xóa
+
+Tạo hình (nền danger lộ ra ở mép đang vuốt tới, icon thùng rác, ngưỡng 35%, animation): **theo `design_handoff/README.md` mục "3. Event detail"**. Phần nghiệp vụ:
+
+- **Không có popup xác nhận.** Xóa ngay khi thả tay qua ngưỡng, bù lại bằng **toast "Hoàn tác"** giữ **5 giây**.
+- Vuốt trên sự kiện **đã quyết toán** (`settledAt != null`) → thẻ **bật về chỗ cũ** và hiện dialog *"Kết quả quyết toán sẽ được tính lại"* trước, y như khi tap để sửa (§8). Không được lặng lẽ xóa sạch đánh dấu Done của cả nhóm chỉ vì một cú vuốt.
+- Thẻ đang vuốt dở mà polling trả về dữ liệu mới → **không** giật thẻ về; cử chỉ đang diễn ra luôn được ưu tiên.
+
+**Hoàn tác — phải nói rõ nó khôi phục được gì và không khôi phục được gì:**
+
+Hoàn tác **tạo lại** khoản chi bằng `POST /api/events/{shareId}/expenses`, không phải khôi phục bản ghi cũ. Hệ quả, đều là cố ý:
+
+| | Sau khi hoàn tác |
+|---|---|
+| Tên, số tiền, người đã chi | **Giữ nguyên** |
+| `id` của khoản chi | **Mới** — bản ghi cũ đã xóa hẳn |
+| Vị trí trong danh sách | **Xuống cuối** (`sortOrder` mới). STT sinh lại lúc render nên danh sách vẫn đánh số liên tục |
+| `dataVersion` | **Tăng hai lần** (một cho xóa, một cho tạo lại) |
+| Đánh dấu Done của cả nhóm | **Không khôi phục** — đã bị xóa ngay từ bước xóa khoản chi |
+
+Dòng cuối là điều quan trọng nhất: hoàn tác cứu được *dữ liệu khoản chi*, **không** cứu được *tiến độ quyết toán*. Đó chính là lý do sự kiện đã quyết toán vẫn phải hỏi trước khi vuốt.
+
+- Toast biến mất sau 5s hoặc khi người dùng xóa khoản khác → lúc đó mất đường hoàn tác. Không xếp hàng nhiều toast hoàn tác cùng lúc; khoản mới vuốt thay chỗ khoản cũ.
+- Hoàn tác hỏng (mất mạng) → toast đỏ báo lỗi, khoản chi vẫn ở trạng thái đã xóa.
 
 ### 6.4. Bottom sheet — thêm / sửa khoản chi
 

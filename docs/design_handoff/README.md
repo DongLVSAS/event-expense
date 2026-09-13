@@ -121,6 +121,14 @@ Segmented control: track bg `#F4EDE5`, radius 16px, padding 4px, gap 6px, margin
 - **[CHỦ DỰ ÁN ĐÈ LÊN HANDOFF]** Nút "Quyết toán →" **chỉ hiện ở tab "Đã chi"**, không hiện ở tab "Cần chi" — xem `docs/screens/03-event-detail.md` §7.
 - **Sticky total bar** (trong tab 2): full-bleed, gradient tối, `position:sticky; top:-54px`, padding `14px 20px`; label "TỔNG CHI TIÊU" (`flex:none; nowrap`, opacity .7) + số tiền Baloo 2 800 30px màu `#FFD166`.
 - Expense card (radius 18px, padding 12px 14px, click = mở sheet sửa): số thứ tự nhạt + tên khoản chi (Nunito 700 16px) + số tiền phải (Baloo 2 800 18px); dòng dưới: avatar 24px + "`<tên>` đã chi".
+- **[CHỦ DỰ ÁN ĐÈ LÊN HANDOFF] Vuốt để xóa** — vuốt thẻ sang **trái hoặc phải** đều xóa. Nền danger `#FF5A6E` nằm **dưới** thẻ và lộ dần ra ở **khoảng trống thẻ để lại** (vuốt sang trái → hở bên phải; vuốt sang phải → hở bên trái), kèm icon thùng rác 22px màu trắng căn giữa theo chiều dọc, cách mép 18px.
+  - **Diễn giải:** chủ dự án mô tả *"vuốt sang bên nào thì góc bên đó đỏ"*. Kiểu lộ-ra ở đây là chuẩn quen thuộc của iOS/Android và là thứ khả thi về mặt vật lý khi thẻ trượt đi. Muốn đổi sang kiểu huy hiệu đỏ trượt vào **cùng phía** đang vuốt thì chỉ cần đổi bên đặt icon.
+  - Icon `opacity` và `scale` tăng dần theo quãng vuốt: `.45 → 1` và `.8 → 1`, đạt tối đa tại ngưỡng.
+  - **Ngưỡng 35% bề ngang thẻ.** Chưa tới ngưỡng mà thả tay → thẻ bật về `translateX(0)` (`180ms cubic-bezier(.22,1,.36,1)`). Qua ngưỡng → nền đậm lên `#E11D48`, rung nhẹ (`navigator.vibrate(12)` nếu có), thả tay thì thẻ trượt hẳn ra khỏi màn theo hướng đang vuốt (`180ms ease-in`) rồi xóa.
+  - Kéo dọc vẫn cuộn bình thường: chỉ bắt cử chỉ ngang khi `|dx| > |dy|`; thẻ đặt `touch-action: pan-y`.
+  - Vuốt xong **không** mở sheet sửa — cử chỉ kéo nuốt luôn cú tap.
+  - Xóa xong hiện **toast có nút "Hoàn tác"** ở đáy màn, giữ 5s (khác toast thường: nền `#2E2A3B`, nút "Hoàn tác" chữ vàng `#FFD166`).
+  - Nút **Xóa** trong bottom sheet **vẫn giữ** — vuốt không dùng được bằng bàn phím.
 - Empty: khung dashed `#EFE0D3` radius 20px.
 - Nút "＋ Thêm khoản chi": dashed teal, bg `#F1FBF7`. **Vị trí đổi theo việc đã có khoản chi hay chưa:**
   - **Chưa có khoản chi nào** — nằm trong luồng nội dung, dưới khung rỗng, full-width cao 50px (như cũ).
